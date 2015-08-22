@@ -18,13 +18,13 @@ phols <- fread("Public_Holidays_Scaled.csv")
 phols <- readph(phols)
 
 ## Bookings
-numr <- c(1:30)[-17]
-r <- clean(eztable)
+#numr <- c(1:30)[-17]
+#r <- clean(eztable)
 
 ## Truncating data
 
-tr <- truncatep(r)
-save(tr,file="truncated_data.Rda")
+#tr <- truncatep(r)
+#save(tr,file="truncated_data.Rda")
 
 load("truncated_data.Rda")
 ## Plotting
@@ -36,8 +36,8 @@ for(i in numr)
 
 ## Best overall model
 
-out <- bmod(tr)
-print(out)
+#out <- bmod(tr)
+#print(out)
 
 rstnum <-7
 plotpub(tr[[rstnum]],rstnum)

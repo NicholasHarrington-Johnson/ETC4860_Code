@@ -1088,8 +1088,7 @@ splinefcwdiag <- function(P,h,k=1){
   for (j in 1:h){
     fc[j] <-arimaspline(P,j,k)$mean[j]
   }   
-  
-  fc <- rev(fc)
+
   return(fc)
 }
 
