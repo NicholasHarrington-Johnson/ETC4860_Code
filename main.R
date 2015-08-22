@@ -39,34 +39,10 @@ for(i in numr)
 out <- bmod(tr)
 print(out)
 
-## Modelling using booking numbers from 1 weeks ago
-
-for (i in numr)
-{
-  nam <- paste("Restaurant_", i, sep = "")
-  assign(nam, arimah(tr[[i]],7))
-}
-
-## Splines
-
-# One knot
-# Using restaurant 1
-k1_19 <- 15
-k1_19 <- optim(k1_19,choose_k1k1h,"Nelder Mead",tr[[19]])
-
-# Two knots
-k2_19 <- c(14,50)
-k2_19 <- optim(k2_19,choose_k2k1h,"Nelder Mead",tr[[19]])
-
-if (k1_19$value < k2_19$value){
-  print(paste("One knot is better than two, found using knots at",toString(k1_19$par)))
-} else {
-  print(paste("Two knots are better than one, found using knots at",toString(k2_19$par)))
-}
-
 rstnum <-7
 plotpub(tr[[rstnum]],rstnum)
-out <- mseevaluate(tr[[rstnum]],starttraining=400)
+out <- mseevaluate(tr[[rstnum]])
 
 print(out[[1]])
 plotmse(out[[2]])
+hplot(out[[3]])

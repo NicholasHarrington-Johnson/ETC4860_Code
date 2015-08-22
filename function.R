@@ -503,203 +503,6 @@ bmod <- function(tr)
 ##########################################################
 ##########################################################
 
-arimah <- function(tri,h=7)
-{
-  ## This function employs an arima model with public holidays and booking information from one unique time period ago (i.e. 14 days)
-  
-  # Zeros have been accounted for by adding 1 to the data
-  # Data has weekly frequency
-  #########################################
-  ##### Creating and Organising Data ######
-  #########################################
-  
-  totpeople <- tri$b_t0
-  
-  tsp(totpeople) <- tsp(tri$pubd)
-  
-  # Creating log of data with weekly frequency
-  
-  logpeople <- ts(log(totpeople+1), start=1, frequency=7)
-  
-  # Create x regressor public holiday dummies
-  
-  xdums <- cbind(as.numeric(tri$pubd),as.numeric(tri$pubi),as.numeric(tri$pubny),tri[(h+1)])
-  
-  colnames(xdums) <- c("going down","going up","ny","previous_bookings1")
-  
-  # Change public holiday dates to numeric
-  nphols <- as.numeric(as.timeDate(phols$Date))
-  
-  # Create time series public holiday variable with appropriate dimensions
-  # Dimensions - 2011 - 2015
-  pholt <- as.numeric(seq(as.Date("2011-01-01"),as.Date("2015-12-31"),by="1 day"))
-  
-  ispubh <- ts(pholt %in% phols, start=2011, frequency=365)
-  
-  # Dimensions - start when y series ends
-  endw <- tail(time(totpeople),n=h+1)
-  # Bookings information
-  fph1 <- ts(tri[(h+1)],start=tsp(tri$pubd)[1],end=tsp(tri$pubd)[2],frequency = 365)
-  # Begin at end[[1]] of y series
-  fph1 <- window(fph1,start=endw[[1]]+(1/365))
-  
-  ## end window for remaining forecasts
-  enddata <- tail(time(fph1),n=1)
-  
-  fispubh <- window(ispubh,start=endw[[1]]+(1/365),end=enddata)
-  # Public Holidays with suspected decreases
-  fpubd <- nphols[which(phols$Holiday=="1")]
-  fpubd <- ts(as.numeric(pholt %in% fpubd), start=2011,frequency = 365)
-  # Begin at end[[1]] of y series
-  fpubd <- window(fpubd,start=endw[[1]]+(1/365),end=enddata)
-  # Public Holidays with suspected increases
-  fpubi <- nphols[which(phols$Holiday=="2")]
-  fpubi <- ts(as.numeric(pholt %in% fpubi), start=2011,frequency = 365)
-  # Begin at end[[1]] of y series
-  fpubi <- window(fpubi,start=endw[[1]]+(1/365),end=enddata)
-  # New Years Eve - suspected increases
-  fpubny <- nphols[which(phols$Holiday=="3")]
-  fpubny <- ts(as.numeric(pholt %in% fpubny),start=2011,frequency = 365)
-  # Begin at end[[1]] of y series
-  fpubny <- window(fpubny,start=endw[[1]]+(1/365),end=enddata)
-  
-  # Create matrix of public holidays for forecasting
-  
-  xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),as.numeric(fph1))
-  
-  colnames(xfor) <- c("going down","going up","ny","previous_bookings1")
-  
-  #########################################################
-  
-  fit2 <- auto.arima(logpeople, xreg=xdums)
-  
-  # Arima fit2 forecast
-  
-  fc2 <- forecast(fit2,xreg=xfor[1:h,], h=h)
-  fc2$mean <- exp(fc2$mean)-1
-  fc2$lower <- exp(fc2$lower)-1
-  fc2$upper <- exp(fc2$upper)-1
-  fc2$x <- ts(tri$b_t0,frequency=365)
-  tsp(fc2$x)<-tsp(tri$pubd)
-  fc2$x <- window(fc2$x,end=tsp(tri$pubd)[2])
-  fc2$x <- window(fc2$x,start=tsp(tri$pubd)[1])
-  fc2$mean <- ts(fc2$mean, start = tsp(fc2$x)[2]+1/365, frequency=365)
-  tsp(fc2$upper) <- tsp(fc2$lower) <- tsp(fc2$mean)
-  plot(fc2,main=paste("Arima model with public holidays and bookings (h=",toString(h),")"))
-  return(fit2)
-}
-
-##########################################################
-##########################################################
-#################### End of Function #####################
-##########################################################
-##########################################################
-
-choose_k1k1h <- function(k,P,h=7)
-  ## This function returns the AICC for a given knot using ONE LINEAR spline in an arima model using public holidays and previous bookings data
-{  
-  # Zeros have been accounted for by adding 1 to the data
-  # Data has weekly frequency
-  #########################################
-  ##### Creating and Organising Data ######
-  #########################################
-  
-  # Creating log of data with weekly frequency
-  
-  if (k>=max(P[(h+1)])|k<1){
-    return(1e20)
-  }
-  
-  logpeople <- ts(log(P$b_t0+1), start=1, frequency=7)
-  
-  # Create splinetastics
-  splinek0 <- P[(h+1)]
-  splinetastic1 <- splinek0-k
-  splinetastic1[splinetastic1<0]=0
-  
-  ########################################################
-  
-  #splinetastic2 <- P[(h2+1)]-k[2]
-  #splinetastic2[splinetastic2<0]=0
-  
-  #########################################################
-  
-  xdums <- cbind(as.numeric(P$pubd),as.numeric(P$pubi),as.numeric(P$pubny),splinek0,splinetastic1)
-  
-  colnames(xdums) <- c("going down","going up","ny",paste("b_t",toString(h),sep=""),paste("spline with knot",toString(k)))
-  
-  #########################################################
-  
-  fit <- auto.arima(logpeople, xreg=xdums)
-  
-  aicc <- fit$aicc
-  return(aicc)
-}
-
-##########################################################
-##########################################################
-#################### End of Function #####################
-##########################################################
-##########################################################
-
-choose_k2k1h <- function(k,P,h=7)
-  ## This function returns the AICC for TWO given knots using ONE LINEAR spline in an arima model using public holidays and previous bookings data
-{  
-  # Zeros have been accounted for by adding 1 to the data
-  # Data has weekly frequency
-  #########################################
-  ##### Creating and Organising Data ######
-  #########################################
-  
-  # Check that k is in order
-  if (k[1]>=k[2] | k[1]<1){return(1e20)}
-
-  
-  if (k[1]>=max(P[(h+1)])){
-    return(1e20)
-  }
-  
-  if (k[2]>=max(P[(h+1)])){
-    return(1e20)
-  }
-  
-  # Creating log of data with weekly frequency
-  
-  logpeople <- ts(log(P$b_t0+1), start=1, frequency=7)
-  
-  # Create splinetastics
-  splinek0 <- P[(h+1)]
-  splinetastic1 <- splinek0-k[1]
-  splinetastic1[splinetastic1<0]=0
-  
-  ########################################################
-  
-  splinetastic2 <- splinek0-k[2]
-  splinetastic2[splinetastic2<0]=0
-  
-  #########################################################
-  
-  xdums <- cbind(as.numeric(P$pubd),as.numeric(P$pubi),as.numeric(P$pubny),splinek0,splinetastic1,splinetastic2)
-  
-  colnames(xdums) <- c("going down","going up","ny",
-                       paste("b_t",toString(h),sep=""),
-                       paste("spline with knot",toString(k[1])),paste("spline with knot",toString(k[2])))
-  
-  #########################################################
-  
-  fit <- auto.arima(logpeople, xreg=xdums)
-  
-  aicc <- fit$aicc
-  return(aicc)
-}
-
-##########################################################
-##########################################################
-#################### End of Function #####################
-##########################################################
-##########################################################
-
-
 readph <- function(phols){
   
   # Change public holiday dates to numeric
@@ -940,8 +743,6 @@ arimaphf <- function(P,h=7){
   
   xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny))
   
-  #colnames(xfor) <- c("going down","going up","ny")
-  
   #########################################################
   
   fit2 <- auto.arima(logpeople, xreg=xdums)
@@ -1178,8 +979,6 @@ mseevaluate <- function(P,starttraining=50,h=7){
     tot <- head(P,n=size+h)
     tot$pubd <- window(P$pubd,start=tsp(P$pubd)[1],end=(tsp(P$pubd)[1]+((size+h-1)/365)),frequency=365)
     
-    #training <- head(tot,n=size)
-    #training$pubd <- window(tot$pubd,start=tsp(tot$pubd)[1],end=(tsp(tot$pubd)[1]+((size-1)/365)),frequency=365)
     # Making test set
     test <- tail(tot,n=h)
     test$pubd <- window(tot$pubd,start=(tsp(tot$pubd)[1]+((size)/365)),end=tsp(tot$pubd)[2],frequency=365)
@@ -1293,6 +1092,30 @@ splinefcwdiag <- function(P,h,k=1){
   fc <- rev(fc)
   return(fc)
 }
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
+
+ploth <- function(hmse){
+  ## This function plots the mean squared error of 4 models across multiple forecast horizons
+  thmse <- as.data.frame(t(hmse))
+  
+  colz <- c("blue","red","black","green")
+  y <- ts(hmse$Pickup,start=1)
+  par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
+  plot(y,col=colz[1],ylim=c(0,max(hmse)),xlab="Forecast horizon",ylab="Total Mean Squared Error")
+  lines(hmse$ARIMA,col=colz[2])
+  lines(hmse$ARIMA_1_knot,col=colz[3])
+  lines(hmse$ARIMA_2_knot,col=colz[4])
+  title(main="Mean Squared Error of Models")
+
+  legend("topright",inset=c(-0.35,0), legend=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot"),col=colz,pch=19)
+
+}
+
 
 ##########################################################
 ##########################################################
