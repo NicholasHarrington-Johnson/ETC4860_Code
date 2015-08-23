@@ -1079,14 +1079,16 @@ plotmse <- function(data){
 ##########################################################
 ##########################################################
 
-splinefcwdiag <- function(P,h,k=1){
+splinefcwdiag <- function(P,h=7,k=1){
   ## This function ensures that an h step arima forecast with splines is taking splines from the correct b_tj
   ## An h step forecast will take splines from b_t(1:h) for a forecast of length h
   
   fc <- rep(0,h)
   
   for (j in 1:h){
-    fc[j] <-arimaspline(P,j,k)$mean[j]
+    fork <- head(P,n=nrow(P)-h+j)
+    fork$pubd<- ts(fork$pubd,start=tsp(P$pubd)[1],frequency=365)
+    fc[j] <-arimaspline(fork,j,k)$mean[j]
   }   
 
   return(fc)
