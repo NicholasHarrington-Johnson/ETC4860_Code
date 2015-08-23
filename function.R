@@ -984,9 +984,9 @@ mseevaluate <- function(P,starttraining=50,h=7){
     test$pubd <- window(tot$pubd,start=(tsp(tot$pubd)[1]+((size)/365)),end=tsp(tot$pubd)[2],frequency=365)
     
     # Running models
-    pick2 <- fpickup(tot)
+    pick2 <- fpickup(tot,h=h)
     
-    arim2 <- arimaphf(tot)
+    arim2 <- arimaphf(tot,h=h)
     
     arims2 <- splinefcwdiag(tot,h)
     
