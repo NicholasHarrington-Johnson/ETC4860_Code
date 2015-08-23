@@ -39,7 +39,7 @@ for(i in numr)
 #out <- bmod(tr)
 #print(out)
 
-rstnum <-7
+rstnum <-1
 plotpub(tr[[rstnum]],rstnum)
 out <- mseevaluate(tr[[rstnum]])
 
