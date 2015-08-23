@@ -18,7 +18,7 @@ phols <- fread("Public_Holidays_Scaled.csv")
 phols <- readph(phols)
 
 ## Bookings
-#numr <- c(1:30)[-17]
+numr <- c(1:30)[-17]
 #r <- clean(eztable)
 
 ## Truncating data
@@ -45,4 +45,4 @@ out <- mseevaluate(tr[[rstnum]])
 
 print(out[[1]])
 plotmse(out[[2]])
-hplot(out[[3]])
+ploth(out[[3]])

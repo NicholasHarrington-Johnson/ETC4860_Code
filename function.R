@@ -1103,12 +1103,12 @@ ploth <- function(hmse){
   thmse <- as.data.frame(t(hmse))
   
   colz <- c("blue","red","black","green")
-  y <- ts(hmse$Pickup,start=1)
+  y <- ts(thmse$Pickup,start=1)
   par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
   plot(y,col=colz[1],ylim=c(0,max(hmse)),xlab="Forecast horizon",ylab="Total Mean Squared Error")
-  lines(hmse$ARIMA,col=colz[2])
-  lines(hmse$ARIMA_1_knot,col=colz[3])
-  lines(hmse$ARIMA_2_knot,col=colz[4])
+  lines(thmse$ARIMA,col=colz[2])
+  lines(thmse$ARIMA_1_knot,col=colz[3])
+  lines(thmse$ARIMA_2_knot,col=colz[4])
   title(main="Mean Squared Error of Models")
 
   legend("topright",inset=c(-0.35,0), legend=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot"),col=colz,pch=19)
