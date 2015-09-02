@@ -908,12 +908,24 @@ arimaspline <- function(P,h=7,k=1){
       xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1]),c(splinef[2]))
     } else if (k==2){
       xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1]),c(splinef[2]),c(splinef[3]))
-    } 
+    }
+    else if (k==3){
+      xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1]),c(splinef[2]),c(splinef[3]),c(splinef[4]))
+    }
+    else if (k==4){
+      xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1]),c(splinef[2]),c(splinef[3]),c(splinef[4]),c(splinef[5]))
+    }
   } else if (h>1){  
   if (k==1){
     xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1:h,1]),c(splinef[1:h,2]))
   } else if (k==2){
     xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1:h,1]),c(splinef[1:h,2]),c(splinef[1:h,3]))
+  }
+  else if (k==3){
+    xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1:h,1]),c(splinef[1:h,2]),c(splinef[1:h,3]),c(splinef[1:h,4]))
+  }
+  else if (k==4){
+    xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1:h,1]),c(splinef[1:h,2]),c(splinef[1:h,3]),c(splinef[1:h,4]),c(splinef[1:h,5]))
   }
   }  
   #########################################################
@@ -948,6 +960,8 @@ arimaspline <- function(P,h=7,k=1){
 ##########################################################
 
 mseevaluate <- function(P,starttraining=50,h=7){
+  
+  ## Note: see error_function
   
   ## This function evaluates the mean squared error of various models and outputs the best performing model
   ## This function also outputs the actual mean squared errors as size of the training set increases
@@ -1123,3 +1137,81 @@ ploth <- function(hmse){
 #################### End of Function #####################
 ##########################################################
 ##########################################################
+
+rest_mod <- function(P,starttraining=50,h=7){
+  
+  ## This function doesn't perform actual analysis on the mse from models 
+  ## - rather it just outputs the actual squared error of the models
+  ## Further analysis can then be performed later
+  
+  ## It operates very similarly to mseevaluate but without the additional features
+  
+  # Try to adapt mseevaluate later on to run on this array that comes out
+  
+  ## Let's shoot for 4 knots
+  
+  # This code takes some time to run
+  
+  ##
+  coln <- rep(NA,h)
+  for (i in 1:h){
+    coln[i]<- paste("h=",toString(i),sep="")
+  }
+  modelz <- c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot","ARIMA_3_knot","ARIMA_4_knot")
+  hmse <- data.frame(matrix(0,nrow=6,ncol=h),row.names=modelz)
+  colnames(hmse)<-coln
+  
+  errors_array <- array(0,dim=c(6,h,(nrow(P)-starttraining-h+1)),dimnames=list(modelz,coln,NULL))
+  
+  ##
+  len <- nrow(P)-h
+  numit <- len - starttraining
+  
+  for (size in starttraining:len){
+    
+    tot <- head(P,n=size+h)
+    tot$pubd <- window(P$pubd,start=tsp(P$pubd)[1],end=(tsp(P$pubd)[1]+((size+h-1)/365)),frequency=365)
+    
+    # Making test set
+    test <- tail(tot,n=h)
+    test$pubd <- window(tot$pubd,start=(tsp(tot$pubd)[1]+((size)/365)),end=tsp(tot$pubd)[2],frequency=365)
+    
+    # Running models
+    
+    pick2 <- fpickup(tot,h=h)    
+    # Residuals
+    rpick2 <- pick2 - test$b_t0
+    
+    arim2 <- arimaphf(tot,h=h)
+    # Residuals
+    rarim2 <- arim2$mean - test$b_t0
+    
+    arims2 <- splinefcwdiag(tot,h,k=1)
+    # Residuals
+    rarims2 <- arims2 - test$b_t0
+    
+    arimsp12 <- splinefcwdiag(tot,h,k=2)
+    # Residuals
+    rarimsp12 <- arimsp12 - test$b_t0
+    
+    arimsp13 <- splinefcwdiag(tot,h,k=3)
+    # Residuals
+    rarimsp13 <- arimsp13 - test$b_t0
+    
+    arimsp14 <- splinefcwdiag(tot,h,k=4)
+    # Residuals
+    rarimsp14 <- arimsp14 - test$b_t0
+    
+    errors_array[,,(size-starttraining+1)] <- rbind(rpick2,rarim2,rarims2,rarimsp12,rarimsp13,rarimsp14)
+    
+  }
+  obj <- errors_array
+  return(obj)
+}
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
+

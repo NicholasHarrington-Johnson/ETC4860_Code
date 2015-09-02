@@ -39,10 +39,20 @@ for(i in numr)
 #out <- bmod(tr)
 #print(out)
 
-rstnum <-2
-plotpub(tr[[rstnum]],rstnum)
-out <- mseevaluate(tr[[rstnum]],h=14)
+#rstnum <-2
+#plotpub(tr[[rstnum]],rstnum)
+#out <- mseevaluate(tr[[rstnum]],h=14)
 
-print(out[[1]])
-plotmse(out[[2]])
-ploth(out[[3]])
+#print(out[[1]])
+#plotmse(out[[2]])
+#ploth(out[[3]])
+
+# Run for all restaurants and output to an R file
+numr <- c(1:3)[-2]
+all_mses <- list()
+for (rstnum in numr){
+  all_mses[[rstnum]] <- rest_mod(tr[[rstnum]],starttraining=(nrow(tr[[rstnum]])-3),h=2)
+}
+
+
+save(all_mses,file="all_mses.Rda")
