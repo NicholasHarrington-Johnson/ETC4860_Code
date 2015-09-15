@@ -1118,16 +1118,18 @@ ploth <- function(hmse){
   ## This function plots the mean squared error of 4 models across multiple forecast horizons
   thmse <- as.data.frame(t(hmse))
   
-  colz <- c("blue","red","black","green")
+  colz <- c("blue","red","black","green","yellow","purple")
   y <- ts(thmse$Pickup,start=1)
   par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
   plot(y,col=colz[1],ylim=c(0,max(hmse)),xlab="Forecast horizon",ylab="Total Mean Squared Error")
   lines(thmse$ARIMA,col=colz[2])
   lines(thmse$ARIMA_1_knot,col=colz[3])
   lines(thmse$ARIMA_2_knot,col=colz[4])
+  lines(thmse$ARIMA_3_knot,col=colz[5])
+  lines(thmse$ARIMA_4_knot,col=colz[6])
   title(main="Mean Squared Error of Models")
 
-  legend("topright",inset=c(-0.35,0), legend=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot"),col=colz,pch=19)
+  legend("topright",inset=c(-0.35,0), legend=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot","ARIMA_3_knot","ARIMA_4_knot"),col=colz,pch=19)
 
 }
 
@@ -1214,4 +1216,57 @@ rest_mod <- function(P,starttraining=50,h=7){
 #################### End of Function #####################
 ##########################################################
 ##########################################################
+
+## Note: The following code has been recently created to
+## help coerce info from the cluster into inferential
+## results. It is incomplete. In particular you still need
+## to check to see how different numbers of iterations are
+## being passed through the cluster (if at all)
+
+reasonablematrix <- function(vector,h=14){
+  coln <- rep(NA,h)
+  for (i in 1:h){
+    coln[i]<- paste("h=",toString(i),sep="")
+  }
+  modelz <- c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot","ARIMA_3_knot","ARIMA_4_knot")
+  
+  out <- matrix(vector,nrow=6,ncol=h,dimnames=list(modelz,coln))
+  return(out)
+}
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
+
+visuali <- function(listy,resty,h=14){
+  
+  mse_1 <- rep(0,length(listy))
+  for (i in 1:length(listy)){
+    mse_1[i] <- listy[[i]][[resty]]
+  }
+  
+  total_list_1 <- list()
+  
+  for (i in 1:(length(mse_1)/84)){
+    if (i==1||i==(length(mse_1)/84)) { unsurehow <- 84*i} else {unsurehow <- 84*i+1}
+    total_list_1[[i]] <- reasonablematrix(mse_1[((i-1)*84+1):unsurehow])
+  }
+  
+  ##################################################
+  summed <- reasonablematrix(rep(0,84))
+  for (i in 1:37){
+    summed <- total_list_1[[i]]^2+summed
+  }
+  return(summed)
+}
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
+
+## Might be nice to have a % best kind of thing too
 
