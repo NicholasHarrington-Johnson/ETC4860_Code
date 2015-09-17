@@ -1246,17 +1246,17 @@ visuali <- function(listy,resty,h=14){
   for (i in 1:length(listy)){
     mse_1[i] <- listy[[i]][[resty]]
   }
-  
+  numit <- (length(listy)/(6*h))
   total_list_1 <- list()
   
-  for (i in 1:(length(mse_1)/84)){
-    if (i==1||i==(length(mse_1)/84)) { unsurehow <- 84*i} else {unsurehow <- 84*i+1}
-    total_list_1[[i]] <- reasonablematrix(mse_1[((i-1)*84+1):unsurehow])
+  for (i in 1:numit){
+    if (i==1||i==numit) { tmpl <- 84*i} else {tmpl <- 84*i+1}
+    total_list_1[[i]] <- reasonablematrix(mse_1[((i-1)*84+1):tmpl])
   }
   
   ##################################################
   summed <- reasonablematrix(rep(0,84))
-  for (i in 1:37){
+  for (i in 1:numit){
     summed <- total_list_1[[i]]^2+summed
   }
   return(summed)
@@ -1270,3 +1270,63 @@ visuali <- function(listy,resty,h=14){
 
 ## Might be nice to have a % best kind of thing too
 
+percent_best <- function(listy,resty,h=14){
+  mse_1 <- rep(0,length(listy))
+  percb <- reasonablematrix(rep(0,84))
+  for (i in 1:length(listy)){
+    mse_1[i] <- listy[[i]][[resty]]
+  }
+  numit <- (length(listy)/(6*h))
+  total_list_1 <- list()
+  
+  for (i in 1:numit){
+    if (i==1||i==numit) { tmpl <- 84*i} else {tmpl <- 84*i+1}
+    total_list_1[[i]] <- (reasonablematrix(mse_1[((i-1)*84+1):tmpl]))^2
+  
+    for (h in 1:14){
+      hvec <- total_list_1[[i]][,h]
+      if (min(hvec)==hvec[1]){
+        percb[,h] <- percb[,h]+c(1,0,0,0,0,0)
+      } else if (min(hvec)==hvec[2]){
+        percb[,h] <- percb[,h]+c(0,1,0,0,0,0)
+      } else if (min(hvec)==hvec[3]){
+        percb[,h] <- percb[,h]+c(0,0,1,0,0,0)
+      } else if (min(hvec)==hvec[4]){
+        percb[,h] <- percb[,h]+c(0,0,0,1,0,0)
+      } else if (min(hvec)==hvec[5]){
+        percb[,h] <- percb[,h]+c(0,0,0,0,1,0)
+      } else if (min(hvec)==hvec[6]){
+        percb[,h] <- percb[,h]+c(0,0,0,0,0,1)
+      }
+    }
+  }
+    
+    percb <- percb/numit  
+    
+  return(percb)
+  }
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
+
+savepdf <- function(file, width=16, height=10)
+{
+  ## This function saves images nicely without whitespace
+  .._fname <- paste(file,".pdf",sep="")
+  pdf(.._fname, width=width/2.54, height=height/2.54, pointsize=10)
+  par(mgp=c(2.2,0.45,0), tcl=-0.4, mar=c(3.3,3.6,1.1,1.1))
+}
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
