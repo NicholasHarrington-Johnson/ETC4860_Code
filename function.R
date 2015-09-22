@@ -158,7 +158,6 @@ truncata <- function(frame, prop=0.05,prope=0.05)
   
 }
 
-
 ##########################################################
 ##########################################################
 #################### End of Function #####################
@@ -197,6 +196,7 @@ truncatep <- function(r)
 #################### End of Function #####################
 ##########################################################
 ##########################################################
+
 clean <- function(eztable)
 {
   # Read in data for resaurants 1 to 30
@@ -214,6 +214,7 @@ clean <- function(eztable)
   }
   return(r)  
 }
+
 ##########################################################
 ##########################################################
 #################### End of Function #####################
@@ -463,6 +464,7 @@ plotpub <- function(frame,name)
   points(time(logpu)[logpu],(y)[logpu],col="blue",pch=19)
   points(time(logpny)[logpny],(y)[logpny],col="green",pch=19)
 }
+
 ##########################################################
 ##########################################################
 #################### End of Function #####################
@@ -495,7 +497,6 @@ bmod <- function(tr)
   
   return(rwintot)
 }
-
 
 ##########################################################
 ##########################################################
@@ -632,7 +633,6 @@ fpickup <- function(P,h=7){
 ##########################################################
 ##########################################################
 
-
 arimaphf <- function(P,h=7){
   ## This function outputs a forecast with horizon h using an arima model with public holidays data
   ## No additional bookings information is included in this model
@@ -708,8 +708,7 @@ arimaphf <- function(P,h=7){
   fpubd <- nphols[which(phols$Holiday=="1")]
   fpubd <- ts(as.numeric(pholt %in% fpubd), start=2011,frequency = 365)
   # Begin at end[[1]] of y series
-  fpubd <- window(fpubd,start=endw[[1]]+(1/365),end=enddata)
-  
+  fpubd <- window(fpubd,start=endw[[1]]+(1/365),end=enddata)  
   
   # Exclude from forecast if omitted from regression
   if (excludeph[1]==TRUE){
@@ -764,9 +763,7 @@ arimaphf <- function(P,h=7){
   plot(fcplot,ylim=range(totpeople,na.rm=TRUE),main=paste(toString(h)," step Arima model with public holidays and bookings"))
   return(fc2)
   
-  
 }
-
 
 ##########################################################
 ##########################################################
@@ -949,9 +946,7 @@ arimaspline <- function(P,h=7,k=1){
   plot(fcplot,ylim=range(totpeople,na.rm=TRUE),main=paste(toString(h)," step Arima spline model with ",toString(k)," knots"))
   return(fc2)
   
-  
 }
-
 
 ##########################################################
 ##########################################################
@@ -1038,7 +1033,6 @@ mseevaluate <- function(P,starttraining=50,h=7){
     # ARIMA 2 knot
     hmse[4,]<-hmse[4,]+(arimsp12 - test$b_t0)^2
     
-    
     ## Print counter
     
     if (size == (ceiling(numit/5)+starttraining)){
@@ -1063,8 +1057,6 @@ mseevaluate <- function(P,starttraining=50,h=7){
   obj <- list(bmod,mses,hmse)
   return(obj)
 }
-
-
 
 ##########################################################
 ##########################################################
@@ -1132,7 +1124,6 @@ ploth <- function(hmse){
   legend("topright",inset=c(-0.35,0), legend=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot","ARIMA_3_knot","ARIMA_4_knot"),col=colz,pch=19)
 
 }
-
 
 ##########################################################
 ##########################################################
@@ -1205,7 +1196,7 @@ rest_mod <- function(P,starttraining=50,h=7){
     rarimsp14 <- arimsp14 - test$b_t0
     
     errors_array[,,(size-starttraining+1)] <- rbind(rpick2,rarim2,rarims2,rarimsp12,rarimsp13,rarimsp14)
-    
+    print(size)
   }
   obj <- errors_array
   return(obj)
@@ -1216,12 +1207,6 @@ rest_mod <- function(P,starttraining=50,h=7){
 #################### End of Function #####################
 ##########################################################
 ##########################################################
-
-## Note: The following code has been recently created to
-## help coerce info from the cluster into inferential
-## results. It is incomplete. In particular you still need
-## to check to see how different numbers of iterations are
-## being passed through the cluster (if at all)
 
 reasonablematrix <- function(vector,h=14){
   coln <- rep(NA,h)
@@ -1259,7 +1244,10 @@ visuali <- function(listy,resty,h=14){
   for (i in 1:numit){
     summed <- total_list_1[[i]]^2+summed
   }
-  return(summed)
+  
+  summedrmse <- sqrt(summed/numit)
+  
+  return(summedrmse)
 }
 
 ##########################################################
@@ -1281,7 +1269,7 @@ percent_best <- function(listy,resty,h=14){
   
   for (i in 1:numit){
     if (i==1||i==numit) { tmpl <- 84*i} else {tmpl <- 84*i+1}
-    total_list_1[[i]] <- (reasonablematrix(mse_1[((i-1)*84+1):tmpl]))^2
+    total_list_1[[i]] <- abs(reasonablematrix(mse_1[((i-1)*84+1):tmpl]))
   
     for (h in 1:14){
       hvec <- total_list_1[[i]][,h]
@@ -1319,12 +1307,6 @@ savepdf <- function(file, width=16, height=10)
   pdf(.._fname, width=width/2.54, height=height/2.54, pointsize=10)
   par(mgp=c(2.2,0.45,0), tcl=-0.4, mar=c(3.3,3.6,1.1,1.1))
 }
-##########################################################
-##########################################################
-#################### End of Function #####################
-##########################################################
-##########################################################
-
 ##########################################################
 ##########################################################
 #################### End of Function #####################
