@@ -1307,8 +1307,104 @@ savepdf <- function(file, width=16, height=10)
   pdf(.._fname, width=width/2.54, height=height/2.54, pointsize=10)
   par(mgp=c(2.2,0.45,0), tcl=-0.4, mar=c(3.3,3.6,1.1,1.1))
 }
+
 ##########################################################
 ##########################################################
 #################### End of Function #####################
 ##########################################################
 ##########################################################
+
+scalemse <- function(listy,resty,h=14){
+  # Can only do this if the length of mse from cluster output is not altered in the cbind
+  # This function scales the rmse of models by the primitive  "primif"  forecast rmse
+  mse_1 <- rep(0,length(listy))
+  percb <- reasonablematrix(rep(0,84))
+  for (i in 1:length(listy)){
+    mse_1[i] <- listy[[i]][[resty]]
+  }
+  
+  rmse_1 <- abs(mse_1)
+  
+  ## Convert rmse_1 into rmses by model
+  numit <- (length(listy)/(6*h))
+  total_list_1 <- list()
+  rmsepickup.14 <- rep(0,numit)
+  rmsearim.14 <- rmsepickup.14
+  rmsearimsp1.14 <- rmsepickup.14
+  rmsearimsp2.14 <- rmsepickup.14
+  rmsearimsp3.14 <- rmsepickup.14
+  rmsearimsp4.14 <- rmsepickup.14
+  
+  for (i in 1:numit){
+    if (i==1||i==numit) { tmpl <- 84*i} else {tmpl <- 84*i+1}
+    total_list_1[[i]] <- abs(reasonablematrix(rmse_1[((i-1)*84+1):tmpl]))
+    
+    ## Looking only at the 14 step forecasts
+    rmsepickup.14[i] <- total_list_1[[i]][1,14]
+    rmsearim.14[i] <- total_list_1[[i]][2,14]
+    rmsearimsp1.14[i] <- total_list_1[[i]][3,14]
+    rmsearimsp2.14[i] <- total_list_1[[i]][4,14]
+    rmsearimsp3.14[i] <- total_list_1[[i]][5,14]
+    rmsearimsp4.14[i] <- total_list_1[[i]][6,14]
+  
+  }
+  
+  primif[[resty]][primif[[resty]]==0] <- 1
+  # This line needs an eyeball
+  primif[[resty]] <- tail(primif[[resty]],numit)
+  
+  all_rmses.14 <- data.frame(rmsepickup.14,rmsearim.14,rmsearimsp1.14,rmsearimsp2.14,rmsearimsp3.14,rmsearimsp4.14)
+  
+  rmse.scaled <- all_rmses.14 * 0
+  
+  for (model in 1:6){
+  rmse.scaled[model] <- all_rmses.14[,model] / primif[[resty]]
+  }
+  return(rmse.scaled)
+}
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
+
+plotscaled <- function(rmse.scaled,resty){
+  
+  colz <- c("blue","red","black","green","yellow","purple")
+  
+  par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
+  plot(rmse.scaled[,1],type="l",col=colz[1],ylim=c(0,max(rmse.scaled)),xlab="Forecast horizon",ylab="Scaled Root Mean Squared Error")
+  lines(rmse.scaled[,2],col=colz[2])
+  lines(rmse.scaled[,3],col=colz[3])
+  lines(rmse.scaled[,4],col=colz[4])
+  lines(rmse.scaled[,5],col=colz[5])
+  lines(rmse.scaled[,6],col=colz[6])
+  title(main=paste("Restaurant ",resty,"Scaled Root Mean Squared Error of Models"))
+  
+  legend("topright",inset=c(-0.35,0), legend=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot","ARIMA_3_knot","ARIMA_4_knot"),col=colz,pch=19)
+  
+}
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
+
+all_d_vizyals <- function(listy){
+  # This function calls functions that graphically illustrate my results
+  
+  for (resty in numr){
+    plotscaled(scalemse(listy,resty),resty)
+    # Include some other nice visual functions
+  }
+  # Maybe do an aggregate one too across restaurants
+}
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
+
