@@ -1337,7 +1337,7 @@ scalemse <- function(listy,resty,h=14){
   
   for (i in 1:numit){
     if (i==1||i==numit) { tmpl <- 84*i} else {tmpl <- 84*i+1}
-    total_list_1[[i]] <- abs(reasonablematrix(rmse_1[((i-1)*84+1):tmpl]))
+    total_list_1[[i]] <- reasonablematrix(rmse_1[((i-1)*84+1):tmpl])
     
     ## Looking only at the 14 step forecasts
     rmsepickup.14[i] <- total_list_1[[i]][1,14]
@@ -1349,16 +1349,19 @@ scalemse <- function(listy,resty,h=14){
   
   }
   
-  primif[[resty]][primif[[resty]]==0] <- 1
-  # This line needs an eyeball
-  primif[[resty]] <- tail(primif[[resty]],numit)
-  
+  # Set zero values to 1 otherwise it won't divide
+  # Alter when all restaurants finish running and primif is a list
+  # Again this is for primif as a list primif[[resty]][primif[[resty]]==0] <- 1
+  # Can only scale the rmse of r4 by the observations that we actually tested: nrow(tr[[4]])-50
+  # This is the primif is a list version primif[[resty]] <- tail(primif[[resty]],numit)
+  # This step won't be necessary anymore because you're taking the median primif[primif==0] <- mean(primif,na.rm=TRUE)
+  primif <- tail(primif,numit)
   all_rmses.14 <- data.frame(rmsepickup.14,rmsearim.14,rmsearimsp1.14,rmsearimsp2.14,rmsearimsp3.14,rmsearimsp4.14)
   
   rmse.scaled <- all_rmses.14 * 0
   
   for (model in 1:6){
-  rmse.scaled[model] <- all_rmses.14[,model] / primif[[resty]]
+  rmse.scaled[,model] <- all_rmses.14[,model] / primif#primif is not a list for now[[resty]]
   }
   return(rmse.scaled)
 }
@@ -1408,3 +1411,38 @@ all_d_vizyals <- function(listy){
 ##########################################################
 ##########################################################
 
+scaleplotbyday <- function(all_mses,resty){
+  scaled <- scalemse(all_mses,1)
+  
+  # Clump by seasonality
+  
+  # For now ignore remainders
+  numw <- floor(nrow(scaled)/7)
+  rmsetr <- tail(scaled,7*numw)
+  
+  Days <- matrix(0,nrow=6,ncol=7)
+  
+  for (iter in 1:6){
+  singlemod <- data.frame(matrix(rmsetr[,iter],nrow=numw,ncol=7))
+  Days[iter,] <- apply(singlemod,2,median)
+  }
+  
+  colz <- c("blue","red","black","green","yellow","purple")
+  
+  par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
+  plot(Days[1,],type="l",col=colz[1],ylim=c(0,max(Days)),xlab="Day",ylab="Scaled Root Mean Squared Error")
+  lines(Days[2,],col=colz[2])
+  lines(Days[3,],col=colz[3])
+  lines(Days[4,],col=colz[4])
+  lines(Days[5,],col=colz[5])
+  lines(Days[6,],col=colz[6])
+  title(main="Restaurant 4: Scaled Root Mean Squared Error of Models")
+  
+  legend("topright",inset=c(-0.36,0), legend=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot","ARIMA_3_knot","ARIMA_4_knot"),col=colz,pch=19)
+}
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
