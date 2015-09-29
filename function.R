@@ -1112,16 +1112,16 @@ ploth <- function(hmse){
   
   colz <- c("blue","red","black","green","yellow","purple")
   y <- ts(thmse$Pickup,start=1)
-  par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
-  plot(y,col=colz[1],ylim=c(0,max(hmse)),xlab="Forecast horizon",ylab="Total Mean Squared Error")
+  par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
+  plot(y,col=colz[1],ylim=c(0,max(hmse)),xlab="Forecast horizon",ylab="Root Mean Squared Error")
   lines(thmse$ARIMA,col=colz[2])
   lines(thmse$ARIMA_1_knot,col=colz[3])
   lines(thmse$ARIMA_2_knot,col=colz[4])
   lines(thmse$ARIMA_3_knot,col=colz[5])
   lines(thmse$ARIMA_4_knot,col=colz[6])
-  title(main="Mean Squared Error of Models")
+  title(main="Average Root Mean Squared Error of Models")
 
-  legend("topright",inset=c(-0.35,0), legend=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot","ARIMA_3_knot","ARIMA_4_knot"),col=colz,pch=19)
+  legend("topright",inset=c(-0.36,0), legend=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot","ARIMA_3_knot","ARIMA_4_knot"),col=colz,pch=19)
 
 }
 
