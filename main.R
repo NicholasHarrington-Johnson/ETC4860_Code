@@ -48,30 +48,20 @@ for(i in numr)
 #ploth(out[[3]]) 
 
 # Run for all restaurants and output to an R file
-numr <- 4
+numr <- c(20:24)
 all_mses <- list()
 
-#for (rstnum in numr){
-#  all_mses[[rstnum]] <- rest_mod(tr[[rstnum]],starttraining=(nrow(tr[[rstnum]])-50),h=2)
-#}
 
-cl <- makeCluster(2)
+cl <- makeCluster(4)
 registerDoParallel(cl)
-# some combine stuff
-# for foreach
-comb <- function(x, ...) {
-  lapply(seq_along(x),
-         function(i) c(x[[i]], lapply(list(...), function(y) y[[i]])))
-}
-# end that
 
 all_mses <- list()
 pckz <- c("data.table","dplyr","fpp","timeDate","splines","doParallel")
-Sys.time()
-all_mses <- foreach(rstnum = numr,.combine='comb',.multicombine = TRUE,.packages = pckz) %dopar% 
-     rest_mod(tr[[rstnum]],starttraining=50,h=14)
-Sys.time()
-save(all_mses,file="just_r_4.Rda")
+
+all_mses <- foreach(rstnum = numr,.combine=list,.multicombine = TRUE,.packages = pckz) %dopar% 
+     rest_mod(tr[[rstnum]],starttraining=(nrow(tr[[rstnum]])-3),h=2)
+
+save(all_mses,file="just_r_small_29.Rda")
 
 stopCluster(cl)
 
@@ -92,4 +82,4 @@ dev.off()
 # Plot h step RMSE
 savepdf("R_4_hRMSE")
 ploth(visuali(all_mses,1))
-dev.off
+dev.off()

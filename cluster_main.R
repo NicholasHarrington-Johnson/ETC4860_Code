@@ -1,8 +1,6 @@
 ## Call all file
 rm(list=ls())
 
-# Run this on the cluster for everything to work nice
-
 ## Loading packages
 
 source("packages.R")
@@ -20,24 +18,17 @@ numr <- c(1:30)[-17]
 
 load("truncated_data.Rda")
 
-# Run for all restaurants and output to an R file
+all_mses <- list()
 
-cl <- makeCluster(8)
+cl <- makeCluster(4)
 registerDoParallel(cl)
-# some combine stuff
-# for foreach
-comb <- function(x, ...) {
-  lapply(seq_along(x),
-         function(i) c(x[[i]], lapply(list(...), function(y) y[[i]])))
-}
-# end that
 
 all_mses <- list()
 pckz <- c("data.table","dplyr","fpp","timeDate","splines","doParallel")
 
-all_mses <- foreach(rstnum = numr,.combine='comb',.multicombine = TRUE,.packages = pckz) %dopar%
-     rest_mod(tr[[rstnum]],starttraining=50,h=14)
+all_mses <- foreach(rstnum = numr,.combine=list,.multicombine = TRUE,.packages = pckz) %dopar% 
+     rest_mod(tr[[rstnum]],starttraining=(nrow(tr[[rstnum]])-3),h=2)
 
-save(all_mses,file="all_mses.Rda")
+save(all_mses,file="just_r_small_29.Rda")
 
 stopCluster(cl)
