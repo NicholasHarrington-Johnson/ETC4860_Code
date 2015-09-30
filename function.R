@@ -772,7 +772,7 @@ arimaphf <- function(P,h=7){
 ##########################################################
 
 
-arimaspline <- function(P,h=7,k=1){
+arimaspline <- function(P,h=7,k=1,includefit=0){
   ## This function outputs a forecast with horizon h using an arima model with public holidays data
   ## This function incorporates a spline variable taken from b_th with k knots
 
@@ -944,6 +944,7 @@ arimaspline <- function(P,h=7,k=1){
   fcplot <- fc2
   fcplot[is.na(fcplot)]<-0
   plot(fcplot,ylim=range(totpeople,na.rm=TRUE),main=paste(toString(h)," step Arima spline model with ",toString(k)," knots"))
+  if(includefit==1){fc2 <- list(fc2,fit2)}
   return(fc2)
   
 }
@@ -1289,9 +1290,13 @@ percent_best <- function(listy,resty,h=14){
     }
   }
     
-    percb <- percb/numit  
+  percb <- t(percb/numit)
+  
+  total <- colSums(percb)/h
+  
+  obj <- rbind(percb,total)
     
-  return(percb)
+  return(obj)
   }
 
 ##########################################################
@@ -1419,7 +1424,9 @@ scaleplotbyday <- function(all_mses,resty){
   # For now ignore remainders
   numw <- floor(nrow(scaled)/7)
   rmsetr <- tail(scaled,7*numw)
-  
+  # By manual inspection of tr[[4]] the last observation falls on a Tuesday
+  # Thus the last forecast falls on a Tuesday
+  # Thus when vectors of residuals are folded they must be folded such that the last observation falls on a Tuesday
   Days <- matrix(0,nrow=6,ncol=7)
   
   for (iter in 1:6){
@@ -1430,7 +1437,8 @@ scaleplotbyday <- function(all_mses,resty){
   colz <- c("blue","red","black","green","yellow","purple")
   
   par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
-  plot(Days[1,],type="l",col=colz[1],ylim=c(0,max(Days)),xlab="Day",ylab="Scaled Root Mean Squared Error")
+  plot(Days[1,],type="l",col=colz[1],ylim=c(0,max(Days)),xaxt="n",xlab="Day",ylab="Scaled Root Mean Squared Error")
+  axis(1,at=1:7,labels=c("Wed","Thu","Fri","Sat","Sun","Mon","Tue"))
   lines(Days[2,],col=colz[2])
   lines(Days[3,],col=colz[3])
   lines(Days[4,],col=colz[4])
@@ -1446,3 +1454,23 @@ scaleplotbyday <- function(all_mses,resty){
 #################### End of Function #####################
 ##########################################################
 ##########################################################
+
+plotpb <- function(pb)
+{
+  ## This function plots the percent best performance of models across forecast horizons
+    pb <- as.data.frame(pb)
+    
+    colz <- c("blue","red","black","green","yellow","purple")
+    y <- ts(pb$Pickup,start=1)
+    par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
+    plot(y,col=colz[1],ylim=c(0,max(pb)),xlab="Forecast horizon",ylab="Percent Best")
+    lines(pb$ARIMA,col=colz[2])
+    lines(pb$ARIMA_1_knot,col=colz[3])
+    lines(pb$ARIMA_2_knot,col=colz[4])
+    lines(pb$ARIMA_3_knot,col=colz[5])
+    lines(pb$ARIMA_4_knot,col=colz[6])
+    title(main="Percent Best by Forecast Horizon")
+    
+    legend("topright",inset=c(-0.36,0), legend=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot","ARIMA_3_knot","ARIMA_4_knot"),col=colz,pch=19)
+    
+  }
