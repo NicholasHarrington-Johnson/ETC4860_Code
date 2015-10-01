@@ -459,10 +459,14 @@ plotpub <- function(frame,name)
   logpny <- ts(as.logical(xny))
   tsp(logpny) <- tsp(xd)
   
+  par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
   plot(y,main=paste("Restaurant",name),  xlab="Year", ylab="Total people booked")
   points(time(logpd)[logpd],(y)[logpd],col="red",pch=19)
   points(time(logpu)[logpu],(y)[logpu],col="blue",pch=19)
-  points(time(logpny)[logpny],(y)[logpny],col="green",pch=19)
+  points(time(logpny)[logpny],(y)[logpny],col="green",pch=19)  
+  legend("topright",inset=c(-0.36,0), legend=c("Down","Up","New Year"),col=c("red","blue","green"),pch=19)
+  
+  
 }
 
 ##########################################################
@@ -1471,6 +1475,6 @@ plotpb <- function(pb)
     lines(pb$ARIMA_4_knot,col=colz[6])
     title(main="Percent Best by Forecast Horizon")
     
-    legend("topright",inset=c(-0.36,0), legend=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot","ARIMA_3_knot","ARIMA_4_knot"),col=colz,pch=19)
+   legend("topright",inset=c(-0.36,0), legend=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot","ARIMA_3_knot","ARIMA_4_knot"),col=colz,pch=19)
     
   }

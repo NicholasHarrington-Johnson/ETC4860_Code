@@ -4,6 +4,11 @@ savepdf("R_4_Histogram")
 hist(log(tr[[4]]$b_t0+1),main="Restaurant 4: Histogram of Logged Bookings Data",xlab="Log of total people + 1")
 dev.off()
 
+# Plot Aggregated Restaurants with no seasonality and PH dummys
+savepdf("PHol_NS")
+source("demeaningpubs.R")
+dev.off()
+
 # In Sample Evaluation of Forecasts
 spm2 <- arimaspline(tr[[4]],h=14,k=4,includefit=1)
 fit <- spm2[[2]]
