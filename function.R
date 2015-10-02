@@ -1141,7 +1141,7 @@ ploth <- function(hmse){
 ##########################################################
 ##########################################################
 
-rest_mod <- function(P,starttraining=50,h=7){
+rest_mod <- function(P,starttraining=50,h=7,rstnum){
   
   ## This function doesn't perform actual analysis on the mse from models 
   ## - rather it just outputs the actual squared error of the models
@@ -1209,6 +1209,9 @@ rest_mod <- function(P,starttraining=50,h=7){
     print(size)
   }
   obj <- errors_array
+  
+  save(obj,file=paste("Resids_R_",rstnum,".Rda",sep=""))
+  
   return(obj)
 }
 
