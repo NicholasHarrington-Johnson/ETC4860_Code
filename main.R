@@ -68,6 +68,7 @@ for (rstnum in numr){
 }
 # Just for now primif is only for one restaurant
 # When additional restaurant rmses finish running primif should be changed back to a list
+load("just_r_4.Rda")
 primif <- primif[[4]]
 
 source("other_visual_stuff.R")

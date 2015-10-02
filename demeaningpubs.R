@@ -65,8 +65,8 @@ tsp(logpu) <- tsp(phols$pubd)
 
 logpny <- ts(as.logical(phols$pubny))
 tsp(logpny) <- tsp(phols$pubd)
-
-plot(y,main=paste("Aggregated Restaurants (No Seasonality)"),  xlab="Year", ylab="Total people booked")
+par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
+plot(y,main=paste("Aggregated Restaurants (No Seasonality)"),  xlab="Year", ylab="Scaled b_t0")
 points(time(logpd)[logpd],(y)[logpd],col="red",pch=19)
 points(time(logpu)[logpu],(y)[logpu],col="blue",pch=19)
 points(time(logpny)[logpny],(y)[logpny],col="green",pch=19)

@@ -460,7 +460,7 @@ plotpub <- function(frame,name)
   tsp(logpny) <- tsp(xd)
   
   par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
-  plot(y,main=paste("Restaurant",name),  xlab="Year", ylab="Total people booked")
+  plot(y,main=paste("Restaurant",name),  xlab="Year", ylab="b_t0")
   points(time(logpd)[logpd],(y)[logpd],col="red",pch=19)
   points(time(logpu)[logpu],(y)[logpu],col="blue",pch=19)
   points(time(logpny)[logpny],(y)[logpny],col="green",pch=19)  
@@ -745,6 +745,9 @@ arimaphf <- function(P,h=7){
   # Create matrix of public holidays for forecasting
   
   xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny))
+  if (excludeph[1]==TRUE & excludeph[2]==TRUE & excludeph[3]==TRUE){
+    xfor <- NULL
+  }
   
   #########################################################
   
@@ -764,7 +767,9 @@ arimaphf <- function(P,h=7){
   tsp(fc2$upper) <- tsp(fc2$lower) <- tsp(fc2$mean)
   fcplot <- fc2
   fcplot[is.na(fcplot)]<-0
-  plot(fcplot,ylim=range(totpeople,na.rm=TRUE),main=paste(toString(h)," step Arima model with public holidays and bookings"))
+  # Just for other_visual_stuff
+  par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
+  plot(fcplot,ylim=range(totpeople,na.rm=TRUE),main="Restaurant 4: ARIMA Model with Public Holidays",xlab="Year",ylab="b_t0",include=70)
   return(fc2)
   
 }
@@ -1478,3 +1483,24 @@ plotpb <- function(pb)
    legend("topright",inset=c(-0.36,0), legend=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot","ARIMA_3_knot","ARIMA_4_knot"),col=colz,pch=19)
     
   }
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
+
+bpscaled <- function(all_rmses,resty,h=14){
+  frame <- scalemse(all_rmses,resty,h)
+  lframe <- log(frame)
+  colz <- c("blue","red","grey","green","yellow","purple")
+  
+  par(mar=c(8, 4.1, 4.1, 9.25), xpd=TRUE)
+  boxplot(lframe,main="Box Plot of Scaled Errors",las=2,ylab="Log of Scaled RMSEs",names=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot","ARIMA_3_knot","ARIMA_4_knot"),col=colz)
+}
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
