@@ -769,7 +769,7 @@ arimaphf <- function(P,h=7){
   fcplot[is.na(fcplot)]<-0
   # Just for other_visual_stuff
   par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
-  plot(fcplot,ylim=range(totpeople,na.rm=TRUE),main="Restaurant 4: ARIMA Model with Public Holidays",xlab="Year",ylab="b_t0",include=70)
+  #plot(fcplot,ylim=range(totpeople,na.rm=TRUE),main="Restaurant 4: ARIMA Model with Public Holidays",xlab="Year",ylab="b_t0",include=70)
   return(fc2)
   
 }
@@ -784,7 +784,7 @@ arimaphf <- function(P,h=7){
 arimaspline <- function(P,h=7,k=1,includefit=0){
   ## This function outputs a forecast with horizon h using an arima model with public holidays data
   ## This function incorporates a spline variable taken from b_th with k knots
-
+  
   tri <- P[1:(nrow(P)-h),]
   
   # Estimating a cubic spline
@@ -849,10 +849,10 @@ arimaspline <- function(P,h=7,k=1,includefit=0){
   pdna[is.na(logpeople)]<-NA
   
   if(sum(pdna>0.5,na.rm=TRUE)){
-        xdums <- cbind(as.numeric(tri$pubd),xdums)
+    xdums <- cbind(as.numeric(tri$pubd),xdums)
     excludeph[1] <- FALSE
   }
-
+  
   # Change public holiday dates to numeric
   nphols <- as.numeric(as.timeDate(phols$Date))
   
@@ -922,17 +922,17 @@ arimaspline <- function(P,h=7,k=1,includefit=0){
       xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1]),c(splinef[2]),c(splinef[3]),c(splinef[4]),c(splinef[5]))
     }
   } else if (h>1){  
-  if (k==1){
-    xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1:h,1]),c(splinef[1:h,2]))
-  } else if (k==2){
-    xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1:h,1]),c(splinef[1:h,2]),c(splinef[1:h,3]))
-  }
-  else if (k==3){
-    xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1:h,1]),c(splinef[1:h,2]),c(splinef[1:h,3]),c(splinef[1:h,4]))
-  }
-  else if (k==4){
-    xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1:h,1]),c(splinef[1:h,2]),c(splinef[1:h,3]),c(splinef[1:h,4]),c(splinef[1:h,5]))
-  }
+    if (k==1){
+      xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1:h,1]),c(splinef[1:h,2]))
+    } else if (k==2){
+      xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1:h,1]),c(splinef[1:h,2]),c(splinef[1:h,3]))
+    }
+    else if (k==3){
+      xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1:h,1]),c(splinef[1:h,2]),c(splinef[1:h,3]),c(splinef[1:h,4]))
+    }
+    else if (k==4){
+      xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1:h,1]),c(splinef[1:h,2]),c(splinef[1:h,3]),c(splinef[1:h,4]),c(splinef[1:h,5]))
+    }
   }  
   #########################################################
   
@@ -952,7 +952,7 @@ arimaspline <- function(P,h=7,k=1,includefit=0){
   tsp(fc2$upper) <- tsp(fc2$lower) <- tsp(fc2$mean)
   fcplot <- fc2
   fcplot[is.na(fcplot)]<-0
-  plot(fcplot,ylim=range(totpeople,na.rm=TRUE),main=paste(toString(h)," step Arima spline model with ",toString(k)," knots"))
+  #plot(fcplot,ylim=range(totpeople,na.rm=TRUE),main=paste(toString(h)," step Arima spline model with ",toString(k)," knots"))
   if(includefit==1){fc2 <- list(fc2,fit2)}
   return(fc2)
   
@@ -987,7 +987,7 @@ mseevaluate <- function(P,starttraining=50,h=7){
   for (i in 1:h){
     coln[i]<- paste("h=",toString(i),sep="")
   }
-  hmse <- data.frame(matrix(0,nrow=4,ncol=h),row.names=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot"))
+  hmse <- data.frame(matrix(0,nrow=4,ncol=h),row.names=c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot"))
   colnames(hmse)<-coln
   ##
   len <- nrow(P)-h
@@ -1084,9 +1084,9 @@ plotmse <- function(data){
   lines(data$msearims2,col=colz[3])
   lines(data$msearimsp12,col=colz[4])
   title(main="Mean Squared Error of Models")
-
+  
   legend("topright",inset=c(-0.35,0), legend=c("Pickup","Arima PH","Arima PH k=1","Arima PH k=2"),col=colz,pch=19)
-
+  
 }
 
 ##########################################################
@@ -1106,7 +1106,7 @@ splinefcwdiag <- function(P,h=7,k=1){
     fork$pubd<- ts(fork$pubd,start=tsp(P$pubd)[1],frequency=365)
     fc[j] <-arimaspline(fork,j,k)$mean[j]
   }   
-
+  
   return(fc)
 }
 
@@ -1125,14 +1125,14 @@ ploth <- function(hmse){
   par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
   plot(y,col=colz[1],ylim=c(0,max(hmse)),xlab="Forecast horizon",ylab="Root Mean Squared Error")
   lines(thmse$ARIMA,col=colz[2])
-  lines(thmse$ARIMA_1_knot,col=colz[3])
-  lines(thmse$ARIMA_2_knot,col=colz[4])
-  lines(thmse$ARIMA_3_knot,col=colz[5])
-  lines(thmse$ARIMA_4_knot,col=colz[6])
+  lines(thmse$Spline_1_knot,col=colz[3])
+  lines(thmse$Spline_2_knot,col=colz[4])
+  lines(thmse$Spline_3_knot,col=colz[5])
+  lines(thmse$Spline_4_knot,col=colz[6])
   title(main="Average Root Mean Squared Error of Models")
-
-  legend("topright",inset=c(-0.36,0), legend=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot","ARIMA_3_knot","ARIMA_4_knot"),col=colz,pch=19)
-
+  
+  legend("topright",inset=c(-0.36,0), legend=c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot"),col=colz,pch=19)
+  
 }
 
 ##########################################################
@@ -1160,7 +1160,7 @@ rest_mod <- function(P,starttraining=50,h=7,rstnum){
   for (i in 1:h){
     coln[i]<- paste("h=",toString(i),sep="")
   }
-  modelz <- c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot","ARIMA_3_knot","ARIMA_4_knot")
+  modelz <- c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot")
   hmse <- data.frame(matrix(0,nrow=6,ncol=h),row.names=modelz)
   colnames(hmse)<-coln
   
@@ -1226,7 +1226,7 @@ reasonablematrix <- function(vector,h=14){
   for (i in 1:h){
     coln[i]<- paste("h=",toString(i),sep="")
   }
-  modelz <- c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot","ARIMA_3_knot","ARIMA_4_knot")
+  modelz <- c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot")
   
   out <- matrix(vector,nrow=6,ncol=h,dimnames=list(modelz,coln))
   return(out)
@@ -1283,7 +1283,7 @@ percent_best <- function(listy,resty,h=14){
   for (i in 1:numit){
     if (i==1||i==numit) { tmpl <- 84*i} else {tmpl <- 84*i+1}
     total_list_1[[i]] <- abs(reasonablematrix(mse_1[((i-1)*84+1):tmpl]))
-  
+    
     for (h in 1:14){
       hvec <- total_list_1[[i]][,h]
       if (min(hvec)==hvec[1]){
@@ -1301,15 +1301,15 @@ percent_best <- function(listy,resty,h=14){
       }
     }
   }
-    
+  
   percb <- t(percb/numit)
   
   total <- colSums(percb)/h
   
   obj <- rbind(percb,total)
-    
+  
   return(obj)
-  }
+}
 
 ##########################################################
 ##########################################################
@@ -1363,7 +1363,7 @@ scalemse <- function(listy,resty,h=14){
     rmsearimsp2.14[i] <- total_list_1[[i]][4,14]
     rmsearimsp3.14[i] <- total_list_1[[i]][5,14]
     rmsearimsp4.14[i] <- total_list_1[[i]][6,14]
-  
+    
   }
   
   # Set zero values to 1 otherwise it won't divide
@@ -1378,7 +1378,7 @@ scalemse <- function(listy,resty,h=14){
   rmse.scaled <- all_rmses.14 * 0
   
   for (model in 1:6){
-  rmse.scaled[,model] <- all_rmses.14[,model] / primif#primif is not a list for now[[resty]]
+    rmse.scaled[,model] <- all_rmses.14[,model] / primif#primif is not a list for now[[resty]]
   }
   return(rmse.scaled)
 }
@@ -1394,15 +1394,15 @@ plotscaled <- function(rmse.scaled,resty){
   colz <- c("blue","red","black","green","yellow","purple")
   
   par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
-  plot(rmse.scaled[,1],type="l",col=colz[1],ylim=c(0,max(rmse.scaled)),xlab="Forecast horizon",ylab="Scaled Root Mean Squared Error")
+  plot(rmse.scaled[,1],type="l",col=colz[1],ylim=c(0,max(rmse.scaled)),xlab="Forecast horizon",ylab="Adjusted RMSE")
   lines(rmse.scaled[,2],col=colz[2])
   lines(rmse.scaled[,3],col=colz[3])
   lines(rmse.scaled[,4],col=colz[4])
   lines(rmse.scaled[,5],col=colz[5])
   lines(rmse.scaled[,6],col=colz[6])
-  title(main=paste("Restaurant ",resty,"Scaled Root Mean Squared Error of Models"))
+  title(main=paste("Restaurant ",resty,"Adjusted RMSE of Models"))
   
-  legend("topright",inset=c(-0.35,0), legend=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot","ARIMA_3_knot","ARIMA_4_knot"),col=colz,pch=19)
+  legend("topright",inset=c(-0.35,0), legend=c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot"),col=colz,pch=19)
   
 }
 
@@ -1442,23 +1442,23 @@ scaleplotbyday <- function(all_mses,resty){
   Days <- matrix(0,nrow=6,ncol=7)
   
   for (iter in 1:6){
-  singlemod <- data.frame(matrix(rmsetr[,iter],nrow=numw,ncol=7))
-  Days[iter,] <- apply(singlemod,2,median)
+    singlemod <- data.frame(matrix(rmsetr[,iter],nrow=numw,ncol=7))
+    Days[iter,] <- apply(singlemod,2,median)
   }
   
   colz <- c("blue","red","black","green","yellow","purple")
   
   par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
-  plot(Days[1,],type="l",col=colz[1],ylim=c(0,max(Days)),xaxt="n",xlab="Day",ylab="Scaled Root Mean Squared Error")
+  plot(Days[1,],type="l",col=colz[1],ylim=c(0,max(Days)),xaxt="n",xlab="Day",ylab="Adjusted RMSE")
   axis(1,at=1:7,labels=c("Wed","Thu","Fri","Sat","Sun","Mon","Tue"))
   lines(Days[2,],col=colz[2])
   lines(Days[3,],col=colz[3])
   lines(Days[4,],col=colz[4])
   lines(Days[5,],col=colz[5])
   lines(Days[6,],col=colz[6])
-  title(main="Restaurant 4: Scaled Root Mean Squared Error of Models")
+  title(main="Restaurant 4: Adjusted RMSE of Models")
   
-  legend("topright",inset=c(-0.36,0), legend=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot","ARIMA_3_knot","ARIMA_4_knot"),col=colz,pch=19)
+  legend("topright",inset=c(-0.36,0), legend=c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot"),col=colz,pch=19)
 }
 
 ##########################################################
@@ -1470,22 +1470,22 @@ scaleplotbyday <- function(all_mses,resty){
 plotpb <- function(pb)
 {
   ## This function plots the percent best performance of models across forecast horizons
-    pb <- as.data.frame(pb)
-    
-    colz <- c("blue","red","black","green","yellow","purple")
-    y <- ts(pb$Pickup,start=1)
-    par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
-    plot(y,col=colz[1],ylim=c(0,max(pb)),xlab="Forecast horizon",ylab="Percent Best")
-    lines(pb$ARIMA,col=colz[2])
-    lines(pb$ARIMA_1_knot,col=colz[3])
-    lines(pb$ARIMA_2_knot,col=colz[4])
-    lines(pb$ARIMA_3_knot,col=colz[5])
-    lines(pb$ARIMA_4_knot,col=colz[6])
-    title(main="Percent Best by Forecast Horizon")
-    
-   legend("topright",inset=c(-0.36,0), legend=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot","ARIMA_3_knot","ARIMA_4_knot"),col=colz,pch=19)
-    
-  }
+  pb <- as.data.frame(pb)
+  
+  colz <- c("blue","red","black","green","yellow","purple")
+  y <- ts(pb$Pickup,start=1)
+  par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
+  plot(y,col=colz[1],ylim=c(0,max(pb)),xlab="Forecast horizon",ylab="Percent Best")
+  lines(pb$ARIMA,col=colz[2])
+  lines(pb$Spline_1_knot,col=colz[3])
+  lines(pb$Spline_2_knot,col=colz[4])
+  lines(pb$Spline_3_knot,col=colz[5])
+  lines(pb$Spline_4_knot,col=colz[6])
+  title(main="Percent Best by Forecast Horizon")
+  
+  legend("topright",inset=c(-0.36,0), legend=c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot"),col=colz,pch=19)
+  
+}
 
 ##########################################################
 ##########################################################
@@ -1499,7 +1499,7 @@ bpscaled <- function(all_rmses,resty,h=14){
   colz <- c("blue","red","grey","green","yellow","purple")
   
   par(mar=c(8, 4.1, 4.1, 9.25), xpd=TRUE)
-  boxplot(lframe,main="Box Plot of Scaled Errors",las=2,ylab="Log of Scaled RMSEs",names=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot","ARIMA_3_knot","ARIMA_4_knot"),col=colz)
+  boxplot(lframe,main="Box Plot of Adjusted RMSEs",las=2,ylab="Log of Adjusted RMSEs",names=c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot"),col=colz)
 }
 
 ##########################################################
