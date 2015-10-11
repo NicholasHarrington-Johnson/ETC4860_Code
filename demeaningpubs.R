@@ -1,3 +1,5 @@
+demeaningpubs <- function(startd=0,endd=10000){
+  
 y <- ts(rep(0,1000000),start=2011,end=2015,frequency=365)
 
 numr <- c(1:30)[-17]
@@ -65,9 +67,44 @@ tsp(logpu) <- tsp(phols$pubd)
 
 logpny <- ts(as.logical(phols$pubny))
 tsp(logpny) <- tsp(phols$pubd)
-par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
-plot(y,main=paste("Aggregated Restaurants (No Seasonality)"),  xlab="Year", ylab="Scaled b_t0")
-points(time(logpd)[logpd],(y)[logpd],col="red",pch=19)
-points(time(logpu)[logpu],(y)[logpu],col="blue",pch=19)
-points(time(logpny)[logpny],(y)[logpny],col="green",pch=19)
-legend("topright",inset=c(-0.36,0), legend=c("Down","Up","New Year"),col=c("red","blue","green"),pch=19)
+if (startd>1){
+  startd <- 2013
+  endd <- 2013.25
+  y <- window(y,start=startd,end=endd)
+  logpd <- window(logpd,start=startd,end=endd)
+  logpu <- window(logpu,start=startd,end=endd)
+  logpny <- window(logpny,start=startd,end=endd)
+} else {
+  startd <- tsp(y)[1]
+  endd <- tsp(y)[2]
+  logpd <- window(logpd,start=startd,end=endd)
+  logpu <- window(logpu,start=startd,end=endd)
+  logpny <- window(logpny,start=startd,end=endd)
+}
+
+datcol <- c(1:length(y))-1
+
+obv1 <- tsp(y)[1]
+year1 <- floor(obv1)
+yfrac <- obv1 - year1
+ndays <- yfrac*365
+stdate <- as.Date(0,origin=paste(toString(year1),"01-01",sep="-"),offset=ndays)
+datcol <- datcol+stdate
+
+n_y <- as.numeric(y)
+n_d <- as.numeric(logpd)*n_y
+n_d[n_d==0] <-NA
+n_nu <- as.numeric(logpu)*n_y
+n_nu[n_nu==0] <-NA
+n_ny <- as.numeric(logpny)*n_y
+n_ny[n_ny==0] <-NA
+plottable <- data.frame(datcol,n_y,n_d,n_nu,n_ny)
+
+p <- ggplot(data=plottable,aes(x=datcol,y=n_y))+
+  geom_line(aes(color="Bookings"))+
+  geom_point(data=plottable,aes(x=datcol,y=n_d,color="Decrease"),size=4)+
+  geom_point(data=plottable,aes(x=datcol,y=n_nu,color="Increase"),size=4)+
+  geom_point(data=plottable,aes(x=datcol,y=n_ny,color="NY"),size=4)+
+  labs(x="Year",y="Scaled Aggregate b_t0",colour="Legend")+ggtitle("Aggregated All Restaurants: No Seasonality")
+p+scale_x_date(labels = date_format("%b-%Y"))
+}

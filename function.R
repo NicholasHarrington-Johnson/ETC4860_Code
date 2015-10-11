@@ -458,14 +458,32 @@ plotpub <- function(frame,name)
   
   logpny <- ts(as.logical(xny))
   tsp(logpny) <- tsp(xd)
+   
+  datcol <- c(1:length(y))-1
   
-  par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
-  plot(y,main=paste("Restaurant",name),  xlab="Year", ylab="b_t0")
-  points(time(logpd)[logpd],(y)[logpd],col="red",pch=19)
-  points(time(logpu)[logpu],(y)[logpu],col="blue",pch=19)
-  points(time(logpny)[logpny],(y)[logpny],col="green",pch=19)  
-  legend("topright",inset=c(-0.36,0), legend=c("Down","Up","New Year"),col=c("red","blue","green"),pch=19)
+  obv1 <- tsp(y)[1]
+  year1 <- floor(obv1)
+  yfrac <- obv1 - year1
+  ndays <- yfrac*365
+  stdate <- as.Date(0,origin=paste(toString(year1),"01-01",sep="-"),offset=ndays)
+  datcol <- datcol+stdate
   
+  n_y <- as.numeric(y)
+  n_d <- as.numeric(logpd)*n_y
+  n_d[n_d==0] <-NA
+  n_nu <- as.numeric(logpu)*n_y
+  n_nu[n_nu==0] <-NA
+  n_ny <- as.numeric(logpny)*n_y
+  n_ny[n_ny==0] <-NA
+  plottable <- data.frame(datcol,n_y,n_d,n_nu,n_ny)
+  
+  p <- ggplot(data=plottable,aes(x=datcol,y=n_y))+
+    geom_line(aes(color="Bookings"))+
+    geom_point(data=plottable,aes(x=datcol,y=n_d,color="Decrease"),size=4)+
+    geom_point(data=plottable,aes(x=datcol,y=n_nu,color="Increase"),size=4)+
+    geom_point(data=plottable,aes(x=datcol,y=n_ny,color="NY"),size=4)+
+    labs(x="Year",y="b_t0",colour="Legend")+ggtitle(paste("Restaurant",name))
+  p+scale_x_date(labels = date_format("%b-%Y"))
   
 }
 
@@ -637,7 +655,7 @@ fpickup <- function(P,h=7){
 ##########################################################
 ##########################################################
 
-arimaphf <- function(P,h=7){
+arimaphf <- function(P,h=7,justplot=0){
   ## This function outputs a forecast with horizon h using an arima model with public holidays data
   ## No additional bookings information is included in this model
   
@@ -768,8 +786,34 @@ arimaphf <- function(P,h=7){
   fcplot <- fc2
   fcplot[is.na(fcplot)]<-0
   # Just for other_visual_stuff
-  par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
-  plot(fcplot,ylim=range(totpeople,na.rm=TRUE),main="Restaurant 4: ARIMA Model with Public Holidays",xlab="Year",ylab="b_t0",include=70)
+  #par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
+  #plot(fcplot,ylim=range(totpeople,na.rm=TRUE),main="Restaurant 4: ARIMA Model with Public Holidays",xlab="Year",ylab="b_t0",include=70)
+ 
+  time <- attr(fcplot$x, "tsp")
+  time <- seq(time[1], attr(fcplot$mean, "tsp")[2], by=1/time[3])
+  lenx <- length(fcplot$x)
+  lenmn <- length(fcplot$mean)
+  
+  df <- data.frame(time=time,
+                   x=c(fcplot$x, fcplot$mean),
+                   fcplot=c(rep(NA, lenx), fcplot$mean),
+                   low1=c(rep(NA, lenx), fcplot$lower[, 1]),
+                   upp1=c(rep(NA, lenx), fcplot$upper[, 1]),
+                   low2=c(rep(NA, lenx), fcplot$lower[, 2]),
+                   upp2=c(rep(NA, lenx), fcplot$upper[, 2])
+  )
+  
+  df <- df[(nrow(df)-70):nrow(df),]
+  
+  plotfc <- ggplot(df, aes(time, x),environment = environment()) +
+    geom_ribbon(aes(ymin=low2, ymax=upp2), fill="yellow") +
+    geom_ribbon(aes(ymin=low1, ymax=upp1), fill="orange") +
+    geom_line() +
+    geom_line(data=df[!is.na(df$fcplot), ], aes(time, fcplot), color="blue", na.rm=TRUE) +
+    scale_x_continuous("Year") +
+    scale_y_continuous("b_t0")+ggtitle("Restaurant 4: ARIMA Model with Public Holidays")
+  
+  if(justplot==1){return(plotfc)}
   return(fc2)
   
 }
@@ -1101,22 +1145,19 @@ ploth <- function(listy,resty){
   ## This function plots the mean squared error of 6 models across multiple forecast horizons
   hmse <- visuali(listy = listy,resty)
   
-  thmse <- as.data.frame(t(hmse))
-  #maxn <- max(tr[[resty]]$b_t0)
-  maxn <- max(thmse)
-  colz <- c("blue","red","black","green","yellow","purple")
-  y <- ts(thmse$Pickup,start=1)
-  par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
-  plot(y,col=colz[1],ylim=c(0,maxn),xlab="Forecast horizon",ylab="RMSE")
-  lines(thmse$ARIMA,col=colz[2])
-  lines(thmse$ARIMA_1_knot,col=colz[3])
-  #lines(thmse$ARIMA_2_knot,col=colz[4])
-  lines(thmse$ARIMA_3_knot,col=colz[5])
-  lines(thmse$ARIMA_4_knot,col=colz[6])
-  title(main=paste("Restaurant ",resty,": Average RMSE of Models",sep=""))
-  
-  legend("topright",inset=c(-0.36,0), legend=c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot"),col=colz,pch=19)
-  
+  fc_h <- c(1:14)
+  tranp <- data.frame(t(hmse)[(1:14),],fc_h)
+  # Called ARIMA out of habit
+  ggplot(tranp,aes(x=fc_h))+
+    geom_line(aes(y=Pickup,colour="Pickup"))+
+    geom_line(aes(y=ARIMA,colour="ARIMA"))+
+    geom_line(aes(y=ARIMA_1_knot,colour="Spline_1_knot"))+
+    geom_line(aes(y=ARIMA_2_knot,colour="Spline_2_knot"))+
+    geom_line(aes(y=ARIMA_3_knot,colour="Spline_3_knot"))+
+    geom_line(aes(y=ARIMA_4_knot,colour="Spline_4_knot"))+
+    ggtitle("RMSE by Forecast Horizon")+
+    labs(x="Forecast Horizon",y="RMSE")+
+    scale_colour_manual(guide=guide_legend(title="Legend"),values=c("Pickup"="blue","ARIMA"="red","Spline_1_knot"="black","Spline_2_knot"="orange","Spline_3_knot"="purple","Spline_4_knot"="green"))
 }
 
 ##########################################################
@@ -1377,19 +1418,21 @@ scaleplotbyday <- function(all_mses,resty){
     Days[iter,] <- apply(singlemod,2,median)
   }
   
-  colz <- c("blue","red","black","green","yellow","purple")
+  time <- c("Wed","Thu","Fri","Sat","Sun","Mon","Tue")
+  row.names(Days)<-c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot")
+  scale.D <- data.frame(t(Days),time)
   
-  par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
-  plot(Days[1,],type="l",col=colz[1],ylim=c(0,max(Days)),xaxt="n",xlab="Day",ylab="Adjusted RMSE")
-  axis(1,at=1:7,labels=c("Wed","Thu","Fri","Sat","Sun","Mon","Tue"))
-  lines(Days[2,],col=colz[2])
-  lines(Days[3,],col=colz[3])
-  lines(Days[4,],col=colz[4])
-  lines(Days[5,],col=colz[5])
-  lines(Days[6,],col=colz[6])
-  title(main=paste("Restaurant ",resty,": Adjusted RMSE of Models"))
+  # Ordering
+  scale.D$time <- as.character(scale.D$time)
+  scale.D$time <- factor(scale.D$time,levels=unique(scale.D$time))
   
-  legend("topright",inset=c(-0.36,0), legend=c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot"),col=colz,pch=19)
+  meltD <- melt(scale.D,id="time")
+  
+  ggplot(meltD,aes(x=time,y=value,colour=variable))+geom_line(aes(group=variable))+
+    ggtitle(paste("Restaurant ",resty,": Adjusted RMSE of Models"))+
+    labs(x="Day",y="Adjusted RMSE")+
+    scale_color_manual("Legend\n",labels=c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot"),values=c("blue","red","black","green","yellow","purple"))
+  
 }
 
 ##########################################################
@@ -1403,18 +1446,18 @@ plotpb <- function(pb)
   ## This function plots the percent best performance of models across forecast horizons
   pb <- as.data.frame(pb)
   
-  colz <- c("blue","red","black","green","yellow","purple")
-  y <- ts(pb$Pickup,start=1)
-  par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
-  plot(y,col=colz[1],ylim=c(0,max(pb)),xlab="Forecast horizon",ylab="Percent Best")
-  lines(pb$ARIMA,col=colz[2])
-  lines(pb$Spline_1_knot,col=colz[3])
-  lines(pb$Spline_2_knot,col=colz[4])
-  lines(pb$Spline_3_knot,col=colz[5])
-  lines(pb$Spline_4_knot,col=colz[6])
-  title(main="Percent Best by Forecast Horizon")
+  tranp <- data.frame(pb[(1:14),],fc_h)
   
-  legend("topright",inset=c(-0.36,0), legend=c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot"),col=colz,pch=19)
+  ggplot(tranp,aes(x=fc_h))+
+    geom_line(aes(y=Pickup,colour="Pickup"))+
+    geom_line(aes(y=ARIMA,colour="ARIMA"))+
+    geom_line(aes(y=Spline_1_knot,colour="Spline_1_knot"))+
+    geom_line(aes(y=Spline_2_knot,colour="Spline_2_knot"))+
+    geom_line(aes(y=Spline_3_knot,colour="Spline_3_knot"))+
+    geom_line(aes(y=Spline_4_knot,colour="Spline_4_knot"))+
+    ggtitle("Percent Best by Forecast Horizon")+
+    labs(x="Forecast Horizon",y="Percent Best")+
+    scale_colour_manual(guide=guide_legend(title="Legend"),values=c("Pickup"="blue","ARIMA"="red","Spline_1_knot"="black","Spline_2_knot"="orange","Spline_3_knot"="purple","Spline_4_knot"="green"))
   
 }
 
@@ -1427,10 +1470,16 @@ plotpb <- function(pb)
 bpscaled <- function(all_rmses,resty,h=14){
   frame <- scalemse(all_rmses,resty,h)
   lframe <- log(frame)
-  colz <- c("blue","red","grey","green","yellow","purple")
   
-  par(mar=c(8, 4.1, 4.1, 9.25), xpd=TRUE)
-  boxplot(lframe,main=paste("Restaurant",resty,"Box Plot of Adjusted RMSEs"),las=2,ylab="Log of Adjusted RMSEs",names=c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot"),col=colz)
+  #ggplot(as.data.frame(lframe))+geom_density(aes(x=rmsepickup.14))+geom_density(aes(x=rmsearim.14))+geom_density(aes(x=rmsearimsp1.14))
+  colnames(lframe)<-c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot")
+  
+  iterant <- c(1:nrow(lframe))
+  datf <- data.frame(lframe,iterant)
+  datfm <- melt(datf,id="iterant")
+  ggplot(datfm)+geom_boxplot(aes(x=variable,y=value))+
+    ggtitle(paste("Restaurant ",resty,": Box Plot of Log Adjusted RMSE",sep=""))+
+    labs(x="",y="Log Adjusted RMSE")
 }
 
 ##########################################################
@@ -1619,5 +1668,7 @@ plotpb_tru <- function(pb)
   title(main="Percent Best by Forecast Horizon")
   
   legend("topright",inset=c(-0.36,0), legend=c("Pickup","ARIMA","Spline_1_knot"),col=colz,pch=19)
+  
+  gg_pb <- cbind(t(pb[,(1:14)]),c(1:14))
   
 }
