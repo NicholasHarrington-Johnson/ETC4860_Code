@@ -11,6 +11,9 @@ savepdf("R_4_Histogram")
 qplot(log(tr[[4]]$b_t0+1),geom="histogram",binwidth=0.1)+labs(x="Log(b_t0+1)")+ggtitle("Restaurant 4: Histogram of Logged Bookings Data")
 dev.off()
 
+# Restaurant 4 by month and by day with b_t14 there too
+source("temporal_periods.R")
+
 # Plot Aggregated Restaurants with no seasonality and PH dummys
 savepdf("PHol_NS")
 demeaningpubs()

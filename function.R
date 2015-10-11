@@ -465,7 +465,7 @@ plotpub <- function(frame,name)
   year1 <- floor(obv1)
   yfrac <- obv1 - year1
   ndays <- yfrac*365
-  stdate <- as.Date(0,origin=paste(toString(year1),"01-01",sep="-"),offset=ndays)
+  stdate <- as.Date(0,origin=paste(toString(year1),"01-01",sep="-"))+ndays
   datcol <- datcol+stdate
   
   n_y <- as.numeric(y)
@@ -1419,7 +1419,14 @@ scaleplotbyday <- function(all_mses,resty){
   }
   
   time <- c("Wed","Thu","Fri","Sat","Sun","Mon","Tue")
-  row.names(Days)<-c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot")
+  
+  # Rows swapped for alphabetical consistency
+  sw_days <- Days
+  sw_days[1,]<-sw_days[2,]
+  sw_days[2,]<-Days[1,]
+  Days<-sw_days
+  
+  row.names(Days)<-c("ARIMA","Pickup","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot")
   scale.D <- data.frame(t(Days),time)
   
   # Ordering
@@ -1429,9 +1436,9 @@ scaleplotbyday <- function(all_mses,resty){
   meltD <- melt(scale.D,id="time")
   
   ggplot(meltD,aes(x=time,y=value,colour=variable))+geom_line(aes(group=variable))+
-    ggtitle(paste("Restaurant ",resty,": Adjusted RMSE of Models"))+
+    ggtitle(paste("Restaurant ",resty,": Adjusted RMSE of Models",sep=""))+
     labs(x="Day",y="Adjusted RMSE")+
-    scale_color_manual("Legend\n",labels=c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot"),values=c("blue","red","black","green","yellow","purple"))
+    scale_color_manual("Legend\n",labels=c("ARIMA","Pickup","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot"),values=c("red","blue","black","green","yellow","purple"))
   
 }
 
