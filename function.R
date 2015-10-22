@@ -482,8 +482,9 @@ plotpub <- function(frame,name)
     geom_point(data=plottable,aes(x=datcol,y=n_d,color="Decrease"),size=4)+
     geom_point(data=plottable,aes(x=datcol,y=n_nu,color="Increase"),size=4)+
     geom_point(data=plottable,aes(x=datcol,y=n_ny,color="NY"),size=4)+
-    labs(x="Year",y="b_t0",colour="Legend")+ggtitle(paste("Restaurant",name))
-  p+scale_x_date(labels = date_format("%b-%Y"))
+    labs(x="Year",y=latex2exp("$b_{t,0}$"),colour="Legend")+ggtitle(paste("Restaurant",name))
+ p <- p+scale_x_date(labels = date_format("%b-%Y"))
+ print(p)
   
 }
 
@@ -658,6 +659,7 @@ fpickup <- function(P,h=7){
 arimaphf <- function(P,h=7,justplot=0){
   ## This function outputs a forecast with horizon h using an arima model with public holidays data
   ## No additional bookings information is included in this model
+  P <- tr[[25]]
   
   tri <- P[1:(nrow(P)-h),]
   tri$pubd <- window(P$pubd,start=tsp(P$pubd)[1],end=(tsp(P$pubd)[2]-(h/365)),frequency=365)
@@ -768,8 +770,10 @@ arimaphf <- function(P,h=7,justplot=0){
   }
   
   #########################################################
-  
-  fit2 <- auto.arima(logpeople, xreg=xdums)
+  if(is.null(xdums)){fit2 <- auto.arima(logpeople)}
+  else {
+    fit2 <- auto.arima(logpeople, xreg=xdums)
+  }
   
   # Arima fit2 forecast
   
@@ -811,9 +815,9 @@ arimaphf <- function(P,h=7,justplot=0){
     geom_line() +
     geom_line(data=df[!is.na(df$fcplot), ], aes(time, fcplot), color="blue", na.rm=TRUE) +
     scale_x_continuous("Year") +
-    scale_y_continuous("b_t0")+ggtitle("Restaurant 4: ARIMA Model with Public Holidays")
+    scale_y_continuous(latex2exp("$\\mathbf{b}_{t}$"))+ggtitle("Restaurant 4: ARIMA Model with Public Holidays")
   
-  if(justplot==1){return(plotfc)}
+  if(justplot==1){print(plotfc)}
   return(fc2)
   
 }
@@ -903,7 +907,9 @@ arimaspline <- function(P,h=7,k=1,includefit=0,fullframe){
   
   ## end window for remaining forecasts
   enddata <- tail(time(P$pubd),n=1)+(h/365)
-      
+   if(enddata<endw){
+     stop("Date problems")
+   }   
   # Begin at end[[1]] of y series
   fpubd <- window(fullframe$pubd,start=endw[[1]]+(1/365),end=enddata)
   
@@ -988,116 +994,6 @@ arimaspline <- function(P,h=7,k=1,includefit=0,fullframe){
 ##########################################################
 ##########################################################
 
-mseevaluate <- function(P,starttraining=50,h=7){
-  
-  ## Note: see error_function
-  
-  ## This function evaluates the mean squared error of various models and outputs the best performing model
-  ## This function also outputs the actual mean squared errors as size of the training set increases
-  
-  # This code takes some time to run
-  ##
-  bmod <- rep(0,4)
-  names(bmod) <- c("Pickup","Arima with Public Holidays","Arima with Public Holidays and k=1","Arima with Public Holidays and k=2")
-  
-  ##
-  msepick2 <- rep(0,((nrow(P)-h)-starttraining))
-  msearim2 <- msepick2
-  msearims2 <- msepick2
-  msearimsp12 <- msepick2
-  
-  ##
-  coln <- rep(NA,h)
-  for (i in 1:h){
-    coln[i]<- paste("h=",toString(i),sep="")
-  }
-  hmse <- data.frame(matrix(0,nrow=4,ncol=h),row.names=c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot"))
-  colnames(hmse)<-coln
-  ##
-  len <- nrow(P)-h
-  numit <- len - starttraining
-  
-  for (size in starttraining:len){
-    write.table(size,"Trainingset.txt")
-    tot <- head(P,n=size+h)
-    tot$pubd <- window(P$pubd,start=tsp(P$pubd)[1],end=(tsp(P$pubd)[1]+((size+h-1)/365)),frequency=365)
-    
-    # Making test set
-    test <- tail(tot,n=h)
-    test$pubd <- window(tot$pubd,start=(tsp(tot$pubd)[1]+((size)/365)),end=tsp(tot$pubd)[2],frequency=365)
-    
-    # Running models
-    pick2 <- fpickup(tot,h=h)
-    
-    arim2 <- arimaphf(tot,h=h)
-    
-    arims2 <- splinefcwdiag(tot,h,P)
-    
-    arimsp12 <- splinefcwdiag(tot,h,k=2,P)
-    
-    # Getting mse overall
-    
-    msepick2[(size-starttraining+1)] <- sum((pick2 - test$b_t0)^2)
-    
-    msearim2[(size-starttraining+1)] <- sum((arim2$mean - test$b_t0)^2)
-    
-    msearims2[(size-starttraining+1)] <- sum((arims2 - test$b_t0)^2)
-    
-    msearimsp12[(size-starttraining+1)] <- sum((arimsp12 - test$b_t0)^2)
-    
-    mse <- c(msepick2[(size-starttraining+1)],msearim2[(size-starttraining+1)],msearims2[(size-starttraining+1)],msearimsp12[(size-starttraining+1)])
-    
-    if (min(mse) == msepick2[(size-starttraining+1)]){
-      bmod <- bmod + c(1,0,0,0)
-    } else if (min(mse)==msearim2[(size-starttraining+1)]){
-      bmod <- bmod + c(0,1,0,0)
-    } else if (min(mse)==msearims2[(size-starttraining+1)]){
-      bmod <- bmod + c(0,0,1,0)
-    } else if (min(mse)==msearimsp12[(size-starttraining+1)]){
-      bmod <- bmod + c(0,0,0,1)
-    }
-    
-    ## Getting mse by h steps
-    # Pickup
-    hmse[1,]<-hmse[1,]+(pick2 - test$b_t0)^2
-    # ARIMA
-    hmse[2,]<-hmse[2,]+((arim2$mean[1:h] - test$b_t0)^2)
-    # ARIMA 1 knot
-    hmse[3,]<-hmse[3,]+(arims2 - test$b_t0)^2
-    # ARIMA 2 knot
-    hmse[4,]<-hmse[4,]+(arimsp12 - test$b_t0)^2
-    
-    ## Print counter
-    
-    if (size == (ceiling(numit/5)+starttraining)){
-      print("20% complete")
-    }
-    
-    if (size == (ceiling(numit/2.5)+starttraining)){
-      print("40% complete")
-    }
-    
-    if (size == (ceiling(3*numit/5)+starttraining)){
-      print("60% complete")
-    }
-    
-    if (size == (ceiling(4*numit/5)+starttraining)){
-      print("80% complete")
-    }
-    
-  }
-  mses <- data.frame(msepick2,msearim2,msearims2,msearimsp12)
-  bmod <- bmod/numit
-  obj <- list(bmod,mses,hmse)
-  return(obj)
-}
-
-##########################################################
-##########################################################
-#################### End of Function #####################
-##########################################################
-##########################################################
-
 plotmse <- function(data){
   ## This function plots the mean squared error of various models as training set size increases
   colz <- c("blue","red","black","green")
@@ -1141,23 +1037,44 @@ splinefcwdiag <- function(P,h=7,k=1,fullframe){
 ##########################################################
 ##########################################################
 
-ploth <- function(listy,resty){
-  ## This function plots the mean squared error of 6 models across multiple forecast horizons
+ploth <- function(listy,resty,errors){
+  ## This function plots the mean squared error of 7 models across multiple forecast horizons
   hmse <- visuali(listy = listy,resty)
   
   fc_h <- c(1:14)
   tranp <- data.frame(t(hmse)[(1:14),],fc_h)
-  # Called ARIMA out of habit
-  ggplot(tranp,aes(x=fc_h))+
+  
+  ##
+  
+  #Remove the weird ones
+  tranp$Spline_1_knot[(tranp$Spline_1_knot)>max(tr[[resty]]$b_t0) ]<- NA
+  tranp$Spline_2_knot[(tranp$Spline_2_knot)>max(tr[[resty]]$b_t0) ] <- NA
+  tranp$Spline_3_knot[(tranp$Spline_3_knot)>max(tr[[resty]]$b_t0) ] <- NA
+  tranp$Spline_4_knot[(tranp$Spline_4_knot)>max(tr[[resty]]$b_t0) ] <- NA
+  # Tell me if it's weird
+  messy.spline <- NULL
+  if(any(is.na(tranp))){
+    messy.spline <- ": I think you should Investigate"
+  } else {
+    messy.spine <- ""
+  }
+  colz <- colnames(tranp)
+  tranp <- data.frame(tranp,t(errors[resty,]))
+  colnames(tranp) <- c(colz,"Naive_Seasonal")
+  
+ out <- ggplot(tranp,aes(x=fc_h))+
     geom_line(aes(y=Pickup,colour="Pickup"))+
     geom_line(aes(y=ARIMA,colour="ARIMA"))+
-    geom_line(aes(y=ARIMA_1_knot,colour="Spline_1_knot"))+
-    geom_line(aes(y=ARIMA_2_knot,colour="Spline_2_knot"))+
-    geom_line(aes(y=ARIMA_3_knot,colour="Spline_3_knot"))+
-    geom_line(aes(y=ARIMA_4_knot,colour="Spline_4_knot"))+
-    ggtitle("RMSE by Forecast Horizon")+
+    geom_line(aes(y=Spline_1_knot,colour="Spline_1_knot"))+
+    geom_line(aes(y=Spline_2_knot,colour="Spline_2_knot"))+
+    geom_line(aes(y=Spline_3_knot,colour="Spline_3_knot"))+
+    geom_line(aes(y=Spline_4_knot,colour="Spline_4_knot"))+
+    geom_line(aes(y=Previous_b_ARIMA,colour="Previous_b_ARIMA"))+
+    geom_line(aes(y=Naive_Seasonal,colour="Naive_Seasonal"))+
+    ggtitle(paste("Restaurant ",resty,": RMSE by Forecast Horizon",messy.spline,sep=""))+
     labs(x="Forecast Horizon",y="RMSE")+
-    scale_colour_manual(guide=guide_legend(title="Legend"),values=c("Pickup"="blue","ARIMA"="red","Spline_1_knot"="black","Spline_2_knot"="orange","Spline_3_knot"="purple","Spline_4_knot"="green"))
+    scale_colour_manual(guide=guide_legend(title=""),values=c("Pickup"="blue","ARIMA"="red","Spline_1_knot"="black","Spline_2_knot"="orange","Spline_3_knot"="purple","Spline_4_knot"="green","Previous_b_ARIMA"="pink","Naive_Seasonal"="yellow"))
+print(out)
 }
 
 ##########################################################
@@ -1167,7 +1084,7 @@ ploth <- function(listy,resty){
 ##########################################################
 
 rest_mod <- function(P,starttraining=100,h=14,rstnum){
-  
+  fullframe <-P
   ## This function doesn't perform actual analysis on the mse from models 
   ## - rather it just outputs the actual squared error of the models
   # Takes a while to run  
@@ -1205,19 +1122,19 @@ rest_mod <- function(P,starttraining=100,h=14,rstnum){
     # Residuals
     rarim2 <- arim2$mean - test$b_t0
     
-    arims2 <- splinefcwdiag(tot,h,k=1,fullframe)
+    arims2 <- splinefcwdiag(tot,h,k=1,fullframe=fullframe)
     # Residuals
     rarims2 <- arims2 - test$b_t0
     
-    arimsp12 <- splinefcwdiag(tot,h,k=2,fullframe)
+    arimsp12 <- splinefcwdiag(tot,h,k=2,fullframe=fullframe)
     # Residuals
     rarimsp12 <- arimsp12 - test$b_t0
     
-    arimsp13 <- splinefcwdiag(tot,h,k=3,fullframe)
+    arimsp13 <- splinefcwdiag(tot,h,k=3,fullframe=fullframe)
     # Residuals
     rarimsp13 <- arimsp13 - test$b_t0
     
-    arimsp14 <- splinefcwdiag(tot,h,k=4,fullframe)
+    arimsp14 <- splinefcwdiag(tot,h,k=4,fullframe=fullframe)
     # Residuals
     rarimsp14 <- arimsp14 - test$b_t0
     
@@ -1242,9 +1159,9 @@ reasonablematrix <- function(vector,h=14){
   for (i in 1:h){
     coln[i]<- paste("h=",toString(i),sep="")
   }
-  modelz <- c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot")
+  modelz <- c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot","Previous_b_ARIMA")
   
-  out <- matrix(vector,nrow=6,ncol=h,dimnames=list(modelz,coln))
+  out <- matrix(vector,nrow=7,ncol=h,dimnames=list(modelz,coln))
   return(out)
 }
 
@@ -1285,9 +1202,9 @@ percent_best <- function(listy,resty,h=14){
   for (i in 1:h){
     coln[i]<- paste("h=",toString(i),sep="")
   }
-  modelz <- c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot")
+  modelz <- c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot","Previous_b_ARIMA")
   
-  percb <- matrix(0,nrow=6,ncol=h,dimnames=list(modelz,coln))
+  percb <- matrix(0,nrow=7,ncol=h,dimnames=list(modelz,coln))
   
   numit <- dim(rmse)[3]
   
@@ -1295,17 +1212,19 @@ percent_best <- function(listy,resty,h=14){
     for (h in 1:14){
       hvec <- rmse[,,i][,h]
       if (min(hvec)==hvec[1]){
-        percb[,h] <- percb[,h]+c(1,0,0,0,0,0)
+        percb[,h] <- percb[,h]+c(1,0,0,0,0,0,0)
       } else if (min(hvec)==hvec[2]){
-        percb[,h] <- percb[,h]+c(0,1,0,0,0,0)
+        percb[,h] <- percb[,h]+c(0,1,0,0,0,0,0)
       } else if (min(hvec)==hvec[3]){
-        percb[,h] <- percb[,h]+c(0,0,1,0,0,0)
+        percb[,h] <- percb[,h]+c(0,0,1,0,0,0,0)
       } else if (min(hvec)==hvec[4]){
-        percb[,h] <- percb[,h]+c(0,0,0,1,0,0)
+        percb[,h] <- percb[,h]+c(0,0,0,1,0,0,0)
       } else if (min(hvec)==hvec[5]){
-        percb[,h] <- percb[,h]+c(0,0,0,0,1,0)
+        percb[,h] <- percb[,h]+c(0,0,0,0,1,0,0)
       } else if (min(hvec)==hvec[6]){
-        percb[,h] <- percb[,h]+c(0,0,0,0,0,1)
+        percb[,h] <- percb[,h]+c(0,0,0,0,0,1,0)
+      } else if (min(hvec)==hvec[7]){
+        percb[,h] <- percb[,h]+c(0,0,0,0,0,0,1)
       }
     }
   
@@ -1347,8 +1266,8 @@ scalemse <- function(listy,resty,h=14){
   
   # Get 14 step errors
   
-  rmsepickup.14<-rmsearim.14<-rmsearimsp1.14<-rmsearimsp2.14<-rmsearimsp3.14<-rmsearimsp4.14<-rep(0,numit)
-  all_rmses.14 <- data.frame(rmsepickup.14,rmsearim.14,rmsearimsp1.14,rmsearimsp2.14,rmsearimsp3.14,rmsearimsp4.14)
+  rmsepickup.14<-rmsearim.14<-rmsearimsp1.14<-rmsearimsp2.14<-rmsearimsp3.14<-rmsearimsp4.14<-rmsearimspb<-rep(0,numit)
+  all_rmses.14 <- data.frame(rmsepickup.14,rmsearim.14,rmsearimsp1.14,rmsearimsp2.14,rmsearimsp3.14,rmsearimsp4.14,rmsearimspb)
   
   for(iter in 1:numit){
     all_rmses.14[iter,] <- abs(thisrest[,,iter][,14])
@@ -1363,9 +1282,10 @@ scalemse <- function(listy,resty,h=14){
   
   
   rmse.scaled <- all_rmses.14 * 0
-  
-  for (model in 1:6){
-    rmse.scaled[,model] <- log(all_rmses.14[,model] / primif[[resty]])
+  for (iter in 1:numit){
+  for (model in 1:7){
+    rmse.scaled[iter,model] <- log(all_rmses.14[iter,model] / primif[[resty]][iter])
+  }
   }
   rmse.scaled<- exp(rmse.scaled)
   return(rmse.scaled)
@@ -1379,18 +1299,20 @@ scalemse <- function(listy,resty,h=14){
 
 plotscaled <- function(rmse.scaled,resty){
   
-  colz <- c("blue","red","black","green","yellow","purple")
+  colnames(rmse.scaled) <- c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot","Previous_b_ARIMA")
   
-  par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
-  plot(rmse.scaled[,1],type="l",col=colz[1],ylim=c(0,max(rmse.scaled)),xlab="Forecast horizon",ylab="Adjusted RMSE")
-  lines(rmse.scaled[,2],col=colz[2])
-  lines(rmse.scaled[,3],col=colz[3])
-  lines(rmse.scaled[,4],col=colz[4])
-  lines(rmse.scaled[,5],col=colz[5])
-  lines(rmse.scaled[,6],col=colz[6])
-  title(main=paste("Restaurant ",resty,"Adjusted RMSE of Models"))
+  Iteration <- c(1:nrow(rmse.scaled))
+  id.scaled <- cbind(rmse.scaled,Iteration)
   
-  legend("topright",inset=c(-0.35,0), legend=c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot"),col=colz,pch=19)
+  dat_long <- melt(id.scaled,id.vars="Iteration")
+  
+  p <- ggplot(dat_long,aes(x=Iteration,y=value,colour=variable))+
+    geom_line()+
+    labs(y="RMSE")+
+    ggtitle(paste("Restaurant ",resty,": Adjusted RMSE of Models",sep=""))+
+    theme(legend.title=element_blank())
+  
+  print(p)
   
 }
 
@@ -1411,9 +1333,9 @@ scaleplotbyday <- function(all_mses,resty){
   # By manual inspection of tr[[4]] the last observation falls on a Tuesday
   # Thus the last forecast falls on a Tuesday
   # Thus when vectors of residuals are folded they must be folded such that the last observation falls on a Tuesday
-  Days <- matrix(0,nrow=6,ncol=7)
+  Days <- matrix(0,nrow=7,ncol=7)
   
-  for (iter in 1:6){
+  for (iter in 1:7){
     singlemod <- data.frame(t(matrix(rmsetr[,iter],nrow=7,ncol=numw)))
     Days[iter,] <- apply(singlemod,2,median)
   }
@@ -1426,7 +1348,7 @@ scaleplotbyday <- function(all_mses,resty){
   sw_days[2,]<-Days[1,]
   Days<-sw_days
   
-  row.names(Days)<-c("ARIMA","Pickup","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot")
+  row.names(Days)<-c("ARIMA","Pickup","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot","Previous_b_ARIMA")
   scale.D <- data.frame(t(Days),time)
   
   # Ordering
@@ -1435,11 +1357,11 @@ scaleplotbyday <- function(all_mses,resty){
   
   meltD <- melt(scale.D,id="time")
   
-  ggplot(meltD,aes(x=time,y=value,colour=variable))+geom_line(aes(group=variable))+
+  p <- ggplot(meltD,aes(x=time,y=value,colour=variable))+geom_line(aes(group=variable))+
     ggtitle(paste("Restaurant ",resty,": Adjusted RMSE of Models",sep=""))+
     labs(x="Day",y="Adjusted RMSE")+
-    scale_color_manual("Legend\n",labels=c("ARIMA","Pickup","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot"),values=c("red","blue","black","green","yellow","purple"))
-  
+    scale_color_manual("",labels=c("ARIMA","Pickup","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot","Previous_b_ARIMA"),values=c("red","blue","black","green","yellow","purple","orange"))
+  print(p)
 }
 
 ##########################################################
@@ -1452,20 +1374,15 @@ plotpb <- function(pb)
 {
   ## This function plots the percent best performance of models across forecast horizons
   pb <- as.data.frame(pb)
-  
+  fc_h <- c(1:14)
   tranp <- data.frame(pb[(1:14),],fc_h)
   
-  ggplot(tranp,aes(x=fc_h))+
-    geom_line(aes(y=Pickup,colour="Pickup"))+
-    geom_line(aes(y=ARIMA,colour="ARIMA"))+
-    geom_line(aes(y=Spline_1_knot,colour="Spline_1_knot"))+
-    geom_line(aes(y=Spline_2_knot,colour="Spline_2_knot"))+
-    geom_line(aes(y=Spline_3_knot,colour="Spline_3_knot"))+
-    geom_line(aes(y=Spline_4_knot,colour="Spline_4_knot"))+
+  dat_long <- melt(tranp,id.vars="fc_h")
+  p <- ggplot(dat_long,aes(x=fc_h,y=value,colour=variable))+geom_line()+
     ggtitle("Percent Best by Forecast Horizon")+
     labs(x="Forecast Horizon",y="Percent Best")+
-    scale_colour_manual(guide=guide_legend(title="Legend"),values=c("Pickup"="blue","ARIMA"="red","Spline_1_knot"="black","Spline_2_knot"="orange","Spline_3_knot"="purple","Spline_4_knot"="green"))
-  
+    scale_colour_manual(guide=guide_legend(title=""),values=c("Pickup"="blue","ARIMA"="red","Spline_1_knot"="black","Spline_2_knot"="orange","Spline_3_knot"="purple","Spline_4_knot"="green","Previous_b_ARIMA"="yellow"))
+  print(p)
 }
 
 ##########################################################
@@ -1479,14 +1396,16 @@ bpscaled <- function(all_rmses,resty,h=14){
   lframe <- log(frame)
   
   #ggplot(as.data.frame(lframe))+geom_density(aes(x=rmsepickup.14))+geom_density(aes(x=rmsearim.14))+geom_density(aes(x=rmsearimsp1.14))
-  colnames(lframe)<-c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot")
+  colnames(lframe)<-c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot","Previous_b_ARIMA")
   
   iterant <- c(1:nrow(lframe))
   datf <- data.frame(lframe,iterant)
   datfm <- melt(datf,id="iterant")
-  ggplot(datfm)+geom_boxplot(aes(x=variable,y=value))+
+  p <- ggplot(datfm)+geom_boxplot(aes(x=variable,y=value))+
     ggtitle(paste("Restaurant ",resty,": Box Plot of Log Adjusted RMSE",sep=""))+
-    labs(x="",y="Log Adjusted RMSE")
+    labs(x="",y="Log Adjusted RMSE")+
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  print(p)
 }
 
 ##########################################################
@@ -1495,12 +1414,12 @@ bpscaled <- function(all_rmses,resty,h=14){
 ##########################################################
 ##########################################################
 
-bpallscaled <- function(all_rmses,completed,h=14){
+bpallscaled <- function(all.mod,completed,h=14,ycap=0){
   
   adj <- list()
   
   for(iter in completed){
-    adj[[iter]] <- scalemse(listy = big_un,resty = iter)
+    adj[[iter]] <- scalemse(listy = all.mod,resty = iter)
   }
   smallest <- completed[1]
   for(iter in 2:length(completed)){
@@ -1516,10 +1435,24 @@ bpallscaled <- function(all_rmses,completed,h=14){
   }
   
   lframe <- log(tot_adj/length(completed))
-  colz <- c("blue","red","grey","green","yellow","purple")
   
-  par(mar=c(8, 4.1, 4.1, 9.25), xpd=TRUE)
-  boxplot(lframe,main="Box Plot of Adjusted RMSEs",las=2,ylab="Log of Adjusted RMSEs",names=c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot"),col=colz)
+  iterant <- c(1:nrow(lframe))
+  colnames(lframe)<-c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot","Previous_b_ARIMA")
+  datf <- data.frame(lframe,iterant)
+  datfm <- melt(datf,id="iterant")
+  if(ycap==0){p <- ggplot(datfm)+geom_boxplot(aes(x=variable,y=value))+
+    ggtitle("All Restaurants: Box Plot of Log Adjusted RMSE")+
+    labs(x="",y="Log Adjusted RMSE")+
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  } else if(ycap==1){
+    p <- ggplot(datfm)+geom_boxplot(aes(x=variable,y=value))+
+      ggtitle("All Restaurants: Box Plot of Log Adjusted RMSE")+
+      labs(x="",y="Log Adjusted RMSE")+
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+      scale_y_continuous(limits=c(-1,5))
+  }
+  print(p)
+  
 }
 
 ##########################################################
@@ -1533,7 +1466,7 @@ byday_alladj <- function(listy,completed,h=14){
   adj <- list()
   
   for(iter in completed){
-    adj[[iter]] <- scalemse(listy = big_un,resty = iter)
+    adj[[iter]] <- scalemse(listy = listy,resty = iter)
   }
   smallest <- completed[1]
   for(iter in 2:length(completed)){
@@ -1555,26 +1488,35 @@ rmsetr <- tail(scaled,7*numw)
 # By manual inspection of tr[[4]] the last observation falls on a Tuesday
 # Thus the last forecast falls on a Tuesday
 # Thus when vectors of residuals are folded they must be folded such that the last observation falls on a Tuesday
-Days <- matrix(0,nrow=6,ncol=7)
+Days <- matrix(0,nrow=7,ncol=7)
 
-for (iter in 1:6){
+for (iter in 1:7){
   singlemod <- data.frame(t(matrix(rmsetr[,iter],nrow=7,ncol=numw)))
   Days[iter,] <- apply(singlemod,2,median)
 }
 
-colz <- c("blue","red","black","green","yellow","purple")
+time <- c("Wed","Thu","Fri","Sat","Sun","Mon","Tue")
 
-par(mar=c(5.1, 4.1, 4.1, 9.25), xpd=TRUE)
-plot(Days[1,],type="l",col=colz[1],ylim=c(0,max(Days)),xaxt="n",xlab="Day",ylab="Adjusted RMSE")
-axis(1,at=1:7,labels=c("Wed","Thu","Fri","Sat","Sun","Mon","Tue"))
-lines(Days[2,],col=colz[2])
-lines(Days[3,],col=colz[3])
-lines(Days[4,],col=colz[4])
-lines(Days[5,],col=colz[5])
-lines(Days[6,],col=colz[6])
-title(main=paste("All Restaurants: Adjusted RMSE of Models"))
+# Rows swapped for alphabetical consistency
+sw_days <- Days
+sw_days[1,]<-sw_days[2,]
+sw_days[2,]<-Days[1,]
+Days<-sw_days
 
-legend("topright",inset=c(-0.36,0), legend=c("Pickup","ARIMA","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot"),col=colz,pch=19)
+row.names(Days)<-c("ARIMA","Pickup","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot","Previous_b_ARIMA")
+scale.D <- data.frame(t(Days),time)
+
+# Ordering
+scale.D$time <- as.character(scale.D$time)
+scale.D$time <- factor(scale.D$time,levels=unique(scale.D$time))
+
+meltD <- melt(scale.D,id="time")
+
+ggplot(meltD,aes(x=time,y=value,colour=variable))+geom_line(aes(group=variable))+
+  ggtitle("All Restaurants: Adjusted RMSE of Models")+
+  labs(x="Day",y="Adjusted RMSE")+
+  scale_color_manual("",labels=c("ARIMA","Pickup","Spline_1_knot","Spline_2_knot","Spline_3_knot","Spline_4_knot","Previous_b_ARIMA"),values=c("red","blue","black","green","yellow","purple","orange"))
+
 }
 ##########################################################
 ##########################################################
@@ -1678,4 +1620,224 @@ plotpb_tru <- function(pb)
   
   gg_pb <- cbind(t(pb[,(1:14)]),c(1:14))
   
+}
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
+
+naive.seas <- function(completed){
+  errors <- data.frame(matrix(NA,nrow=length(completed),ncol=14))
+  for(num in completed){
+    b.t.0 <- tr[[num]]$b_t0
+    for (p.h in 1:14){
+      errors[num,p.h] <- mean(abs(b.t.0[15:length(b.t.0)]-b.t.0[1:(length(b.t.0)-14)]))
+    }
+  }
+  return(errors)
+}
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
+
+p.booking.arima <- function(frame,h=14,rstnum,fullframe,includefit=0){
+  
+  totpeople <- frame$b_t0
+  
+  tsp(totpeople) <- tsp(frame$pubd)
+  
+  # Creating log of data with weekly frequency
+  
+  logpeople <- ts(log(totpeople+1), start=1, frequency=7)
+  
+  #########################################################
+  
+  ## Before fitting remove 0s from logpeople data
+  logpeople[logpeople<1]<-NA
+  # Autoarima should handle this
+  
+  #########################################################
+  
+  # X regressor public holiday dummies and bookings
+  fullxdums <- fullframe[1:(nrow(frame)+h),(h+1)]
+  xdums <- head(fullxdums,nrow(frame))
+  excludeph <- rep(TRUE,3)
+  
+  ## We must remove the public holiday regressors if:
+  # They only occur on days when logpeople is NA
+  # OR
+  # They sum to zero
+  
+  pnyna <- frame$pubny
+  pnyna[is.na(logpeople)]<-NA
+  
+  if(sum(pnyna,na.rm=TRUE)>0.5){
+    frame$pubny[is.na(logpeople)]<-NA
+    xdums <- cbind(as.numeric(frame$pubny),xdums)
+    excludeph[3] <- FALSE
+  }
+  
+  pina <- frame$pubi
+  pina[is.na(logpeople)]<-NA
+  
+  if(sum(pina,na.rm=TRUE)>0.5){
+    xdums <- cbind(as.numeric(frame$pubi),xdums)
+    excludeph[2] <- FALSE
+  }
+  
+  pdna <- frame$pubd
+  pdna[is.na(logpeople)]<-NA
+  
+  if(sum(pdna,na.rm=TRUE)>0.5){
+    xdums <- cbind(as.numeric(frame$pubd),xdums)
+    excludeph[1] <- FALSE
+  }
+  
+  # Dimensions - start when y series ends
+  endw <- tail(time(totpeople),n=1)
+  
+  ## end window for remaining forecasts
+  enddata <- tail(time(totpeople),n=1)+(h/365)
+  if(enddata<endw){
+    stop("Date problems")
+  }   
+  # Begin at end[[1]] of y series
+  fpubd <- window(fullframe$pubd,start=endw[[1]]+(1/365),end=enddata)
+  
+  # Exclude from forecast if omitted from regression
+  if (excludeph[1]==TRUE){
+    fpubd <- NULL
+  }
+  
+  # Begin at end[[1]] of y series
+  fpubi <- window(fullframe$pubi,start=endw[[1]]+(1/365),end=enddata)
+  
+  # Exclude from forecast if omitted from regression
+  if (excludeph[2]==TRUE){
+    fpubi <- NULL
+  }
+  
+  # Begin at end[[1]] of y series
+  fpubny <- window(fullframe$pubny,start=endw[[1]]+(1/365),end=enddata)
+  
+  # Exclude from forecast if omitted from regression
+  if (excludeph[3]==TRUE){
+    fpubny <- NULL
+  }
+  
+  # Spline Forecast Variable
+  
+  xfor <- tail(fullxdums,h)
+  
+  xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),xfor)  
+  #########################################################
+  
+  fit2 <- auto.arima(logpeople, xreg=xdums)
+  
+  # Arima fit2 forecast
+  
+  fc2 <- forecast(fit2,xreg=xfor, h=h)
+  fc2$mean <- exp(fc2$mean)-1
+  fc2$lower <- exp(fc2$lower)-1
+  fc2$upper <- exp(fc2$upper)-1
+  fc2$x <- ts(frame$b_t0,frequency=365)
+  tsp(fc2$x)<-tsp(frame$pubd)
+  fc2$x <- window(fc2$x,end=tsp(frame$pubd)[2])
+  fc2$x <- window(fc2$x,start=tsp(frame$pubd)[1])
+  fc2$mean <- ts(fc2$mean, start = tsp(fc2$x)[2]+1/365, frequency=365)
+  tsp(fc2$upper) <- tsp(fc2$lower) <- tsp(fc2$mean)
+  fcplot <- fc2
+  fcplot[is.na(fcplot)]<-0
+  # plot(fcplot,ylim=range(totpeople,na.rm=TRUE),main=paste(h,"step Arima with past bookings"))
+  if(includefit==1){fc2 <- list(fc2,fit2)}
+  return(fc2)
+}
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
+
+diag.prev.b <- function(P,h=14,rstnum,fullframe){
+  top <- head(P,(nrow(P)-h))
+  top$pubd <- ts(top$pubd,start=tsp(P$pubd)[1],frequency = 365)
+  fc <- rep(0,h)
+  for (h.step in 1:h){
+    fc[h.step]<-p.booking.arima(frame=top,h = h.step,rstnum = rstnum,fullframe = fullframe)$mean[h.step]
+  }
+  return(fc)
+}
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
+
+rolling.orig.pre.b <- function(rstnum,starttraining=100){
+  
+  fullframe <-tr[[rstnum]]
+  P <- fullframe
+  ## This function doesn't perform actual analysis on the mse from models 
+  ## - rather it just outputs the actual squared error of the models
+  # Takes a while to run  
+  ##
+  coln <- rep(NA,h)
+  for (i in 1:h){
+    coln[i]<- paste("h=",toString(i),sep="")
+  }
+  modelz <- c("Previous_Bookings")
+  hmse <- data.frame(matrix(0,nrow=1,ncol=h),row.names=modelz)
+  colnames(hmse)<-coln
+  
+  errors_array <- array(0,dim=c(1,h,(nrow(P)-starttraining-h+1)),dimnames=list(modelz,coln,NULL))
+  
+  ##
+  len <- nrow(P)-h
+  numit <- len - starttraining
+  
+  for (size in starttraining:len){
+    
+    tot <- head(P,n=size+h)
+    tot$pubd <- window(P$pubd,start=tsp(P$pubd)[1],end=(tsp(P$pubd)[1]+((size+h-1)/365)),frequency=365)
+    
+    # Making test set
+    test <- tail(tot,n=h)
+    test$pubd <- window(tot$pubd,start=(tsp(tot$pubd)[1]+((size)/365)),end=tsp(tot$pubd)[2],frequency=365)
+    
+    # Running models
+    
+    errors_array[,,(size-starttraining+1)] <- diag.prev.b(P=tot,h=h,rstnum=rstnum,fullframe=fullframe)-test$b_t0
+    print(size)
+  }
+  obj <- errors_array
+  
+  save(obj,file=paste("Rs_R_",rstnum,"singlebook.Rda",sep=""))
+  
+  return(obj)
+}
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
+
+make.resids <- function(pb.ns,completed,starttraining=100){
+  # This function takes the forecasts from rolling origin and makes them residuals
+  new.ns <- pb.ns
+  for (j in completed){
+    numit <- dim(pb.ns[[j]])[3]
+    test <- tr[[j]]$b_t0
+    for (iter in 1:numit){
+      new.ns[[j]][,,iter] <- abs(pb.ns[[j]][,,iter] - test[(starttraining+iter):(starttraining+iter-1+14)])
+    }
+  }
+  return(new.ns)
 }
